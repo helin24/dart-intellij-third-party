@@ -40,7 +40,7 @@ public class DartProblem {
   }
 
   @NotNull
-  String getCorrectionMessage() {
+  public String getCorrectionMessage() {
     return StringUtil.notNullize(myAnalysisError.getCorrection());
   }
 
