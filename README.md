@@ -36,8 +36,9 @@ Prerequisites:
    click [+] and add JDK 1.8. Add [JDK]/lib/tools.jar to the SDK Classpath if it is not there. Rename SDK to 'IDEA jdk'.
    Click [+] to add one more JDK and provide path to JDK 1.8 once again . Leave default name "1.8". Make sure it contains [JDK]/lib/tools.jar
 
-3. On Welcome screen click Configure | Settings (Preferences), look for Path Variables and add the following vars there:
-   - IDEA_ULTIMATE_PLUGINS pointing to [IntelliJ IDEA Ultimate Installation]/plugins
+3. On Welcome screen click Configure | Settings (Preferences), look for Path Variables and add the IDEA_ULTIMATE_PLUGINS 
+   variable pointing to [IntelliJ IDEA Ultimate Installation]/plugins (Linux, Windows) or 
+   [IntelliJ IDEA Ultimate Installation]/Contents/plugins (Mac)
 
 4. Open intellij-community project, compile it.
    Open File | Project Structure | Modules | [+] | Import Module, select intellij-plugins/Dart/Dart-community.iml.
