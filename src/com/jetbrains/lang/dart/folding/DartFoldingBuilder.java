@@ -56,7 +56,6 @@ public class DartFoldingBuilder extends CustomFoldingBuilder implements DumbAwar
     foldNewDartExpressions(descriptors, psiElements);                                  // 10. Constructor invocations
   }
 
-
   protected String getLanguagePlaceholderText(@NotNull final ASTNode node, @NotNull final TextRange range) {
     final IElementType elementType = node.getElementType();
     final PsiElement psiElement = node.getPsi();
@@ -272,7 +271,6 @@ public class DartFoldingBuilder extends CustomFoldingBuilder implements DumbAwar
       }
     }
   }
-
 
   private static void foldMultilineStrings(@NotNull final List<FoldingDescriptor> descriptors,
                                            @NotNull final Collection<PsiElement> psiElements) {
