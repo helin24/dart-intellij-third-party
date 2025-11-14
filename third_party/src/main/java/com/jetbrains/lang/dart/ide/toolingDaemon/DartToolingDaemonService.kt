@@ -21,10 +21,7 @@ import com.intellij.openapi.roots.ModuleRootManager
 import com.intellij.openapi.util.Key
 import com.intellij.openapi.util.io.FileUtil
 import com.intellij.openapi.util.text.StringUtil
-import com.intellij.openapi.vfs.VfsUtil
-import com.intellij.openapi.vfs.VfsUtilCore
-import com.intellij.openapi.vfs.VirtualFile
-import com.intellij.openapi.vfs.VirtualFileManager
+import com.intellij.openapi.vfs.*
 import com.intellij.util.EventDispatcher
 import com.intellij.util.PathUtil
 import com.intellij.util.concurrency.AppExecutorUtil
@@ -32,6 +29,7 @@ import com.intellij.util.concurrency.annotations.RequiresBackgroundThread
 import com.intellij.util.concurrency.annotations.RequiresReadLock
 import com.intellij.util.io.BaseOutputReader
 import com.intellij.util.io.URLUtil
+import com.intellij.xdebugger.impl.XSourcePositionImpl
 import com.jetbrains.lang.dart.analyzer.DartAnalysisServerService
 import com.jetbrains.lang.dart.ide.devtools.DartDevToolsService
 import com.jetbrains.lang.dart.sdk.DartSdk
@@ -42,7 +40,9 @@ import de.roderick.weberknecht.WebSocketEventHandler
 import de.roderick.weberknecht.WebSocketException
 import de.roderick.weberknecht.WebSocketMessage
 import kotlinx.coroutines.CoroutineScope
+import java.net.MalformedURLException
 import java.net.URI
+import java.net.URISyntaxException
 import java.nio.charset.StandardCharsets
 import java.util.concurrent.Callable
 import java.util.concurrent.atomic.AtomicInteger
@@ -64,7 +64,7 @@ class DartToolingDaemonService private constructor(val project: Project, cs: Cor
   private var lastSentRootUris: List<String> = emptyList()
 
   private val nextRequestId = AtomicInteger()
-  private val consumerMap: MutableMap<String, DartToolingDaemonConsumer> = mutableMapOf()
+  private val consumerMap: MutableMap<Int, DartToolingDaemonConsumer> = mutableMapOf()
   private val servicesMap: MutableMap<String, DartToolingDaemonRequestHandler> = mutableMapOf()
 
   private val eventDispatcher: EventDispatcher<DartToolingDaemonListener> = EventDispatcher.create(DartToolingDaemonListener::class.java)
@@ -109,6 +109,7 @@ class DartToolingDaemonService private constructor(val project: Project, cs: Cor
       connectToDtdWebSocket(it)
       DartAnalysisServerService.getInstance(project).connectToDtd(uri)
     }
+    DtdEditorService(project, this).setUpService()
   }
 
   private fun connectToDtdWebSocket(uri: String) {
@@ -156,7 +157,7 @@ class DartToolingDaemonService private constructor(val project: Project, cs: Cor
     request.addProperty("jsonrpc", "2.0")
     request.addProperty("method", method)
 
-    val id = nextRequestId.incrementAndGet().toString()
+    val id = nextRequestId.incrementAndGet()
     request.addProperty("id", id)
     secret?.takeIf { includeSecret }?.let { params.addProperty("secret", it) }
     request.add("params", params)
@@ -168,7 +169,7 @@ class DartToolingDaemonService private constructor(val project: Project, cs: Cor
     webSocket.send(requestString)
   }
 
-  private fun sendResponse(id: String, result: JsonObject?, error: JsonObject? = null) {
+  private fun sendResponse(id: Int, result: JsonObject?, error: JsonObject? = null) {
     if (!webSocketReady) {
       logger.warn("sendResponse(\"$id\", $result) called when the socket is not ready")
       return
@@ -362,15 +363,15 @@ class DartToolingDaemonService private constructor(val project: Project, cs: Cor
         eventDispatcher.multicaster.received(streamId, json)
       }
       else if (serviceConsumer != null) {
-        val params = json["params"].asJsonObject
-        val id = json["id"].asString
+        val params = json["params"]?.asJsonObject ?: JsonObject()
+        val id = json["id"].asInt
         ApplicationManager.getApplication().executeOnPooledThread {
           val response = serviceConsumer.handleRequest(params)
           sendResponse(id, response.result, response.error)
         }
       }
       else {
-        val id = json["id"].asString
+        val id = json["id"].asInt
         val consumer = consumerMap.remove(id)
         consumer?.received(json)
       }
