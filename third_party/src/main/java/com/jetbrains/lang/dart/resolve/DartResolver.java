@@ -1,6 +1,7 @@
 // Copyright 2000-2024 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
 package com.jetbrains.lang.dart.resolve;
 
+import com.intellij.lang.ASTNode;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.TextRange;
 import com.intellij.openapi.vfs.VirtualFile;
@@ -18,6 +19,7 @@ import com.jetbrains.lang.dart.analyzer.DartServerData;
 import com.jetbrains.lang.dart.analyzer.DartServerData.DartNavigationRegion;
 import com.jetbrains.lang.dart.analyzer.DartServerData.DartNavigationTarget;
 import com.jetbrains.lang.dart.psi.*;
+import com.jetbrains.lang.dart.DartTokenTypes;
 import com.jetbrains.lang.dart.util.DartResolveUtil;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -56,6 +58,22 @@ public class DartResolver implements ResolveCache.AbstractResolver<DartReference
           refOffset = expressions.get(0).getTextRange().getStartOffset();
           refLength = expressions.get(1).getTextRange().getEndOffset() - refOffset;
           region = findRegion(refPsiFile, refOffset, refLength);
+        }
+      }
+    }
+
+    if (region == null && reference instanceof DartNewExpression) {
+      for (ASTNode child : reference.getNode().getChildren(null)) {
+        if (child.getPsi() instanceof DartReference || child.getElementType() == DartTokenTypes.NEW) {
+          refOffset = child.getTextRange().getStartOffset();
+          refLength = child.getTextRange().getLength();
+          region = findRegion(refPsiFile, refOffset, refLength);
+          if (region != null)
+            break;
+        }
+        if (child.getElementType() == DartTokenTypes.LPAREN ||
+            child.getElementType() == DartTokenTypes.TYPE_ARGUMENTS) {
+          break;
         }
       }
     }

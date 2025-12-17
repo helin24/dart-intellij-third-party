@@ -1,8 +1,16 @@
 ## 501.0.0
 
+### Added
+
+### Changed
+
 ### Removed
 
 - Dropped support for Dart SDK versions older than 2.12.
+
+### Fixed
+
+- Fixed resolution for Dart dot shorthands (e.g. `.new`, `.named`).
 
 ## 500.0.0
 

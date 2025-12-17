@@ -389,12 +389,17 @@ public final class DartServerCompletionContributor extends CompletionContributor
         reference.getRangeInElement(); // to ensure that references are sorted by range
         reference = ((PsiMultiReference)reference).getReferences()[0];
       }
-      if (reference instanceof DartNewExpression ||
-          reference instanceof DartParenthesizedExpression ||
-          reference instanceof DartListLiteralExpression ||
-          reference instanceof DartSetOrMapLiteralExpression) {
+      if (reference instanceof DartNewExpression) {
         // historically DartNewExpression is a reference; it can appear here only in situation like new Foo(o.<caret>);
         // without the following hack closing paren is replaced on Tab. We won't get here if at least one symbol after dot typed.
+        if (((DartNewExpression) reference).getLastChild() instanceof PsiErrorElement) {
+          // f(.new) or f(.named) - we want default replacement logic
+        } else {
+          context.setReplacementOffset(context.getStartOffset());
+        }
+      } else if (reference instanceof DartParenthesizedExpression ||
+          reference instanceof DartListLiteralExpression ||
+          reference instanceof DartSetOrMapLiteralExpression) {
         context.setReplacementOffset(context.getStartOffset());
       }
       if (reference instanceof DartReferenceExpression) {
