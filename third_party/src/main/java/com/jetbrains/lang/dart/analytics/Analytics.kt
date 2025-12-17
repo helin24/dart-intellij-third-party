@@ -11,6 +11,7 @@ import com.google.gson.JsonObject
 import com.intellij.CommonBundle
 import com.intellij.notification.NotificationGroupManager
 import com.intellij.notification.NotificationType
+import com.intellij.openapi.actionSystem.ActionPlaces
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.application.ApplicationInfo
@@ -186,7 +187,7 @@ private object AnalyticsConfigurationManager {
     ApplicationManager.getApplication().invokeLater {
       NotificationGroupManager.getInstance()
         .getNotificationGroup(DAS_NOTIFICATION_GROUP)
-        .createNotification(data!!.consentMessage!!, NotificationType.INFORMATION).also { notification ->
+        .createNotification(data.consentMessage!!, NotificationType.INFORMATION).also { notification ->
           notification.addAction(object : AnAction(CommonBundle.getOkButtonText()) {
             override fun actionPerformed(e: AnActionEvent) {
               try {
@@ -222,25 +223,25 @@ object Analytics {
 }
 
 
-class ActionData(private val id: String?, private val place: String, project: Project?) :
-  AnalyticsData("action", project) {
+class ActionData(id: String?, place: String, project: Project?) :
+  AnalyticsData(AnalyticsConstants.ACTION_TYPE, id, project) {
 
   init {
-    id?.let { add(AnalyticsConstants.ID, it) }
     add(AnalyticsConstants.PLACE, place)
-  }
-
-  override fun reportTo(reporter: AnalyticsReporter) {
-    // We only report if we have an id for the event.
-    if (id == null) return
-    super.reportTo(reporter)
   }
 }
 
-abstract class AnalyticsData(type: String, val project: Project? = null) {
+class AssistData(id: String?, project: Project?) :
+  AnalyticsData(AnalyticsConstants.ASSIST_TYPE, id, project)
+
+class FixData(id: String?, project: Project?) :
+  AnalyticsData(AnalyticsConstants.FIX_TYPE, id, project)
+
+abstract class AnalyticsData(type: String, val id: String?, val project: Project? = null) {
   val data = mutableMapOf<String, Any>()
 
   init {
+    id?.let { add(AnalyticsConstants.ID, it) }
     add(AnalyticsConstants.TYPE, type)
   }
 
@@ -258,14 +259,32 @@ abstract class AnalyticsData(type: String, val project: Project? = null) {
     data[key] = value
   }
 
-  open fun reportTo(reporter: AnalyticsReporter) = reporter.process(this)
+  open fun reportTo(reporter: AnalyticsReporter) {
+    // We only report if we have an id for the event.
+    if (id == null) return
+    reporter.process(this)
+  }
 
   companion object {
     @JvmStatic
-    fun forAction(action: AnAction, event: AnActionEvent): ActionData = ActionData(
-      event.actionManager.getId(action),
-      event.place,
-      event.project
+    fun forAssist(id: String?, project: Project?): AssistData = AssistData(id, project)
+
+    @JvmStatic
+    fun forFix(id: String?, project: Project?): FixData = FixData(id, project)
+
+    @JvmStatic
+    fun forAction(action: AnAction, event: AnActionEvent): ActionData = forAction(
+      event.actionManager.getId(action), event.place, event.project
+    )
+
+    @JvmStatic
+    fun forAction(id: String?, place: String, project: Project?): ActionData = ActionData(
+      id, place, project
+    )
+
+    @JvmStatic
+    fun forAction(id: String?, project: Project?): ActionData = forAction(
+      id, ActionPlaces.UNKNOWN, project
     )
   }
 }
@@ -279,19 +298,22 @@ object AnalyticsConstants {
 
   /**
    * The UI location where an action was invoked, as provided by
-   * [com.intellij.openapi.actionSystem.PlaceProvider.getPlace] (for example, "MainMenu",
-   * "MainToolbar", "EditorPopup", "GoToAction", etc).
+   * [com.intellij.ui.PlaceProvider.getPlace] (for example, "MainMenu",
+   * "MainToolbar", "EditorPopup", "GoToAction", etc.).
    */
   @JvmField
   val PLACE = StringValue("place")
 
   /**
-   * The type of the analytics event (e.g., "action", ...).
+   * The type of the analytics event (e.g., "action", "assist", "fix", ...).
    */
   @JvmField
   val TYPE = StringValue("type")
-}
 
+  internal const val ACTION_TYPE = "action"
+  internal const val ASSIST_TYPE = "assist"
+  internal const val FIX_TYPE = "fix"
+}
 
 sealed class DataValue<T>(val name: String) {
   abstract fun addTo(data: AnalyticsData, value: T)

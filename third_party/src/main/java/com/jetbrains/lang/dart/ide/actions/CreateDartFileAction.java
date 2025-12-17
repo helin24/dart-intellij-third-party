@@ -4,13 +4,11 @@ package com.jetbrains.lang.dart.ide.actions;
 import com.intellij.ide.actions.CreateFileFromTemplateAction;
 import com.intellij.ide.actions.CreateFileFromTemplateDialog;
 import com.intellij.openapi.actionSystem.ActionManager;
-import com.intellij.openapi.actionSystem.ActionPlaces;
 import com.intellij.openapi.actionSystem.CommonDataKeys;
 import com.intellij.openapi.actionSystem.DataContext;
 import com.intellij.openapi.project.Project;
 import com.intellij.psi.PsiDirectory;
 import com.jetbrains.lang.dart.DartBundle;
-import com.jetbrains.lang.dart.analytics.ActionData;
 import com.jetbrains.lang.dart.analytics.Analytics;
 import com.jetbrains.lang.dart.analytics.AnalyticsData;
 import com.jetbrains.lang.dart.sdk.DartSdk;
@@ -42,6 +40,6 @@ public class CreateDartFileAction extends CreateFileFromTemplateAction {
     // expected `actionPerformed` is marked final in super.
 
     // TODO (pq): see if there's some way to find this action's place (w/o event data).
-    Analytics.report(new ActionData(ActionManager.getInstance().getId(this), ActionPlaces.UNKNOWN, project));
+    Analytics.report(AnalyticsData.forAction(ActionManager.getInstance().getId(this), project));
   }
 }
