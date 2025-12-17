@@ -183,13 +183,7 @@ public abstract class ServerRefactoring {
     if (!success) return;
     // wait for completion
     if (indicator != null) {
-      while (true) {
-        ProgressIndicatorUtils.checkCancelledEvenWithPCEDisabled(indicator);
-        boolean done = Uninterruptibles.awaitUninterruptibly(latch, 10, TimeUnit.MILLISECONDS);
-        if (done) {
-          return;
-        }
-      }
+      ProgressIndicatorUtils.awaitWithCheckCanceled(latch);
     }
     else {
       // Wait a very short time, just in case if it can be done fast,
