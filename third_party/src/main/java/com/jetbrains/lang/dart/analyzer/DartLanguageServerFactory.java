@@ -5,11 +5,7 @@ package com.jetbrains.lang.dart.analyzer;
 import com.intellij.openapi.project.Project;
 import com.redhat.devtools.lsp4ij.LanguageServerFactory;
 import com.redhat.devtools.lsp4ij.client.features.LSPClientFeatures;
-import com.redhat.devtools.lsp4ij.client.features.LSPCompletionFeature;
-import com.redhat.devtools.lsp4ij.client.features.LSPDiagnosticFeature;
-import com.redhat.devtools.lsp4ij.client.features.LSPHoverFeature;
 import com.redhat.devtools.lsp4ij.server.StreamConnectionProvider;
-import com.intellij.psi.PsiFile;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -33,32 +29,6 @@ public class DartLanguageServerFactory implements LanguageServerFactory {
 
   @Override
   public @NotNull LSPClientFeatures createClientFeatures() {
-    LSPClientFeatures features = new LSPClientFeatures();
-
-    // Enable hover — this is the primary LSP feature we're proxying.
-    features.setHoverFeature(new LSPHoverFeature() {
-      @Override
-      public boolean isEnabled(@NotNull PsiFile file) {
-        return true;
-      }
-    });
-
-    // Disable completion — still handled by legacy protocol.
-    features.setCompletionFeature(new LSPCompletionFeature() {
-      @Override
-      public boolean isEnabled(@NotNull PsiFile file) {
-        return false;
-      }
-    });
-
-    // Disable diagnostics — still handled by legacy protocol.
-    features.setDiagnosticFeature(new LSPDiagnosticFeature() {
-      @Override
-      public boolean isEnabled(@NotNull PsiFile file) {
-        return false;
-      }
-    });
-
-    return features;
+    return new DartLSPClientFeatures();
   }
 }
