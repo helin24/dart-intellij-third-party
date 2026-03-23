@@ -7,15 +7,16 @@ import com.redhat.devtools.lsp4ij.client.features.LSPCompletionFeature;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * Disables LSP completion for Dart files.
+ * Controls whether LSP completion is enabled for Dart files.
  *
- * <p>Completion is still handled by the legacy Dart Analysis Server protocol
- * and has not yet been migrated to the LSP-over-legacy proxy.</p>
+ * <p>By default, completion is handled by the legacy Dart Analysis Server
+ * protocol. Users can opt in to LSP-based completion via the
+ * "Use LSP for completion" setting in {@link DartLspSettings}.</p>
  */
 public class DartLSPCompletionFeature extends LSPCompletionFeature {
 
   @Override
   public boolean isEnabled(@NotNull PsiFile file) {
-    return false;
+    return DartLspSettings.getInstance().useLspCompletion;
   }
 }

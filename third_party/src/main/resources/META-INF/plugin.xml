@@ -237,6 +237,7 @@
     <testSourcesFilter implementation="com.jetbrains.lang.dart.test.DartTestSourcesFilter"/>
 
     <applicationService serviceImplementation="com.jetbrains.lang.dart.ide.codeInsight.DartCodeInsightSettings"/>
+    <applicationService serviceImplementation="com.jetbrains.lang.dart.analyzer.DartLspSettings"/>
     <codeCompletionConfigurable instance="com.jetbrains.lang.dart.ide.editor.DartSmartKeysConfigurable"/>
 
     <backgroundPostStartupActivity implementation="com.jetbrains.lang.dart.DartStartupActivity"/>

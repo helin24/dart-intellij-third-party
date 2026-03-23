@@ -32,6 +32,7 @@ import com.intellij.util.ui.ColumnInfo;
 import com.intellij.util.ui.JBUI;
 import com.intellij.util.ui.UIUtil;
 import com.jetbrains.lang.dart.DartBundle;
+import com.jetbrains.lang.dart.analyzer.DartLspSettings;
 import com.jetbrains.lang.dart.flutter.FlutterUtil;
 import org.jetbrains.annotations.Nls;
 import org.jetbrains.annotations.NotNull;
@@ -44,6 +45,7 @@ import javax.swing.event.TreeWillExpandListener;
 import javax.swing.text.JTextComponent;
 import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.ExpandVetoException;
+import java.awt.*;
 import java.util.*;
 
 public final class DartConfigurable implements SearchableConfigurable, NoScroll {
@@ -71,6 +73,10 @@ public final class DartConfigurable implements SearchableConfigurable, NoScroll 
 
   private CheckboxTreeTable myModulesCheckboxTreeTable;
   private JBLabel myErrorLabel;
+
+  // LSP feature toggles
+  private JBCheckBox myUseLspCompletionCheckBox;
+  private JBCheckBox myUseLspDiagnosticsCheckBox;
 
   private final @NotNull Project myProject;
   private final boolean myShowModulesPanel;
@@ -207,7 +213,22 @@ public final class DartConfigurable implements SearchableConfigurable, NoScroll 
 
   @Override
   public @Nullable JComponent createComponent() {
-    return myMainPanel;
+    // Add LSP feature toggles below the main form
+    JPanel wrapper = new JPanel(new BorderLayout());
+    wrapper.add(myMainPanel, BorderLayout.CENTER);
+
+    JPanel lspPanel = new JPanel();
+    lspPanel.setLayout(new BoxLayout(lspPanel, BoxLayout.Y_AXIS));
+    lspPanel.setBorder(IdeBorderFactory.createTitledBorder(DartBundle.message("dart.lsp.settings.title")));
+
+    myUseLspCompletionCheckBox = new JBCheckBox(DartBundle.message("dart.lsp.settings.use.lsp.completion"));
+    myUseLspDiagnosticsCheckBox = new JBCheckBox(DartBundle.message("dart.lsp.settings.use.lsp.diagnostics"));
+
+    lspPanel.add(myUseLspCompletionCheckBox);
+    lspPanel.add(myUseLspDiagnosticsCheckBox);
+
+    wrapper.add(lspPanel, BorderLayout.SOUTH);
+    return wrapper;
   }
 
   @Override
@@ -233,6 +254,10 @@ public final class DartConfigurable implements SearchableConfigurable, NoScroll 
     }
 
     if (myPortField.getNumber() != getWebdevPort(myProject)) return true;
+
+    final DartLspSettings lspSettings = DartLspSettings.getInstance();
+    if (myUseLspCompletionCheckBox != null && myUseLspCompletionCheckBox.isSelected() != lspSettings.useLspCompletion) return true;
+    if (myUseLspDiagnosticsCheckBox != null && myUseLspDiagnosticsCheckBox.isSelected() != lspSettings.useLspDiagnostics) return true;
 
     if (myShowModulesPanel) {
       final Module[] selectedModules = myModulesCheckboxTreeTable.getCheckedNodes(Module.class);
@@ -289,6 +314,15 @@ public final class DartConfigurable implements SearchableConfigurable, NoScroll 
       }
     }
 
+    // Reset LSP feature toggles
+    final DartLspSettings lspSettings = DartLspSettings.getInstance();
+    if (myUseLspCompletionCheckBox != null) {
+      myUseLspCompletionCheckBox.setSelected(lspSettings.useLspCompletion);
+    }
+    if (myUseLspDiagnosticsCheckBox != null) {
+      myUseLspDiagnosticsCheckBox.setSelected(lspSettings.useLspDiagnostics);
+    }
+
     updateControlsEnabledState();
     updateErrorLabel();
   }
@@ -339,6 +373,15 @@ public final class DartConfigurable implements SearchableConfigurable, NoScroll 
         }
 
         setWebdevPort(myProject, myPortField.getNumber());
+
+        // Apply LSP feature toggles
+        final DartLspSettings lspSettings = DartLspSettings.getInstance();
+        if (myUseLspCompletionCheckBox != null) {
+          lspSettings.useLspCompletion = myUseLspCompletionCheckBox.isSelected();
+        }
+        if (myUseLspDiagnosticsCheckBox != null) {
+          lspSettings.useLspDiagnostics = myUseLspDiagnosticsCheckBox.isSelected();
+        }
       }
       else {
         if (!myModulesWithDartSdkLibAttachedInitial.isEmpty() && mySdkInitial != null) {

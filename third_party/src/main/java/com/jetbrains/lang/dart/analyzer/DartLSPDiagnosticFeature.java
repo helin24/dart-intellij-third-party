@@ -7,15 +7,16 @@ import com.redhat.devtools.lsp4ij.client.features.LSPDiagnosticFeature;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * Disables LSP diagnostics for Dart files.
+ * Controls whether LSP diagnostics are enabled for Dart files.
  *
- * <p>Diagnostics are still handled by the legacy Dart Analysis Server protocol
- * and have not yet been migrated to the LSP-over-legacy proxy.</p>
+ * <p>By default, diagnostics are handled by the legacy Dart Analysis Server
+ * protocol. Users can opt in to LSP-based diagnostics via the
+ * "Use LSP for diagnostics" setting in {@link DartLspSettings}.</p>
  */
 public class DartLSPDiagnosticFeature extends LSPDiagnosticFeature {
 
   @Override
   public boolean isEnabled(@NotNull PsiFile file) {
-    return false;
+    return DartLspSettings.getInstance().useLspDiagnostics;
   }
 }
