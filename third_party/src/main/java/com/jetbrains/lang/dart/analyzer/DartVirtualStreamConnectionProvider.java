@@ -28,17 +28,24 @@ import java.nio.charset.StandardCharsets;
  * A background reader thread reads the outgoing requests from the piped stream,
  * handles protocol-level messages (initialize, shutdown) locally, and forwards
  * supported methods (e.g. {@code textDocument/hover}) to the Dart Analysis
- * Server via its legacy {@code lsp.handle} protocol. Responses from the server
- * containing {@code lspMessage} or {@code lspResponse} payloads are written back
- * into the pipe that feeds {@link #getInputStream()} so lsp4ij can consume them.</p>
+ * Server via its legacy {@code lsp.handle} protocol.</p>
  *
- * <h3>Why manual Content-Length framing?</h3>
+ * <h3>Response path — DartMessageProducer</h3>
+ * <p>When a {@link DartMessageProducer} is registered (via
+ * {@link DartMessageProducerRegistry}), DAS responses are enqueued directly
+ * as JSON strings into the producer, bypassing the piped streams for the
+ * response direction. The producer feeds parsed {@code Message} objects to
+ * lsp4j's pipeline, eliminating Content-Length framing on the response path.</p>
+ *
+ * <p>If no producer is registered (fallback mode), responses are written as
+ * Content-Length framed bytes to the pipe that feeds {@link #getInputStream()},
+ * which lsp4ij's {@code StreamMessageProducer} can read normally.</p>
+ *
+ * <h3>Why manual Content-Length framing on the request path?</h3>
  * <p>lsp4ij's {@code Launcher} writes properly framed LSP messages (with
  * {@code Content-Length} headers) to {@link #getOutputStream()}. Since we read
  * from the piped end of that stream in our own thread (outside lsp4j's
- * infrastructure), we parse the framing manually. Similarly, responses written
- * back into {@link #getInputStream()} must be properly framed so lsp4ij's
- * internal {@code StreamMessageProducer} can decode them.</p>
+ * infrastructure), we parse the framing manually.</p>
  */
 class DartVirtualStreamConnectionProvider implements StreamConnectionProvider {
 
@@ -46,6 +53,7 @@ class DartVirtualStreamConnectionProvider implements StreamConnectionProvider {
 
   // lsp4ij reads LSP responses from ideInputStream.
   // We write responses into serverOutputStream, which is piped to ideInputStream.
+  // (Used only in fallback mode when DartMessageProducer is not available)
   private final PipedInputStream ideInputStream = new PipedInputStream(1024 * 1024);
   private final PipedOutputStream serverOutputStream = new PipedOutputStream();
 
@@ -87,11 +95,36 @@ class DartVirtualStreamConnectionProvider implements StreamConnectionProvider {
   @Override
   public void stop() {
     alive = false;
+    // Clean up the producer registration
+    DartMessageProducer producer = DartMessageProducerRegistry.get(project);
+    if (producer != null) {
+      producer.close();
+      DartMessageProducerRegistry.unregister(project);
+    }
   }
 
   @Override
   public boolean isAlive() {
     return alive;
+  }
+
+  /**
+   * Sends an LSP response JSON payload back to lsp4ij.
+   *
+   * <p>If a {@link DartMessageProducer} is registered, the JSON is enqueued
+   * directly (no framing needed). Otherwise, falls back to writing
+   * Content-Length framed bytes to the pipe.</p>
+   */
+  private void sendResponseToLsp4ij(String json) throws IOException {
+    DartMessageProducer producer = DartMessageProducerRegistry.get(project);
+    if (producer != null) {
+      // Direct path: enqueue the JSON into the producer's blocking queue.
+      // The producer's listen() loop will parse it and feed it to lsp4j.
+      producer.enqueueResponse(json);
+    } else {
+      // Fallback: write Content-Length framed bytes to the pipe.
+      writeMessage(serverOutputStream, json);
+    }
   }
 
   /**
@@ -110,7 +143,7 @@ class DartVirtualStreamConnectionProvider implements StreamConnectionProvider {
         if (lspPayload != null && alive) {
           LOG.info("★★★ LSP-over-legacy: Sending hover response back to lsp4ij ★★★");
           LOG.debug("Dart server sent lsp payload: " + lspPayload);
-          writeMessage(serverOutputStream, lspPayload.toString());
+          sendResponseToLsp4ij(lspPayload.toString());
         }
       } catch (JsonParseException e) {
         LOG.warn("Failed to parse lsp payload from Dart server", e);
@@ -197,7 +230,7 @@ class DartVirtualStreamConnectionProvider implements StreamConnectionProvider {
     result.add("capabilities", capabilities);
     response.add("result", result);
 
-    writeMessage(serverOutputStream, response.toString());
+    sendResponseToLsp4ij(response.toString());
     LOG.info("★★★ LSP-over-legacy: Sent fake initialize response to lsp4ij ★★★");
   }
 
@@ -211,7 +244,7 @@ class DartVirtualStreamConnectionProvider implements StreamConnectionProvider {
       response.add("id", lspMessage.get("id"));
       response.add("result", null);
 
-      writeMessage(serverOutputStream, response.toString());
+      sendResponseToLsp4ij(response.toString());
       LOG.debug("Sent fake shutdown response to lsp4ij via streams");
     }
   }
@@ -298,6 +331,7 @@ class DartVirtualStreamConnectionProvider implements StreamConnectionProvider {
   /**
    * Writes an LSP message (with {@code Content-Length} header) to the output stream.
    * Synchronized to prevent interleaving when multiple threads write responses.
+   * Used only in fallback mode when DartMessageProducer is not available.
    */
   private synchronized void writeMessage(OutputStream out, String json) throws IOException {
     byte[] body = json.getBytes(StandardCharsets.UTF_8);
