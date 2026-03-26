@@ -271,10 +271,16 @@
     <webServerPathHandler implementation="com.jetbrains.lang.dart.pubServer.PubServerPathHandler"/>
   </extensions>
 
-  <!-- LSP server is registered programmatically by DartLspServerRegistrar
-       to ensure DartLanguageServerDefinition is used directly (not wrapped
-       in ExtensionLanguageServerDefinition), which allows createLauncherBuilder
-       override to inject the custom DartMessageProducer. -->
+  <extensions defaultExtensionNs="com.redhat.devtools.lsp4ij">
+    <server id="dartLanguageServer"
+            name="Dart Language Server"
+            factoryClass="com.jetbrains.lang.dart.analyzer.DartLanguageServerFactory">
+      <description><![CDATA[
+        Dart Language Server powered by the Dart Analysis Server via LSP-over-legacy protocol proxy.
+      ]]></description>
+    </server>
+    <languageMapping language="Dart" serverId="dartLanguageServer" languageId="dart"/>
+  </extensions>
 
   <projectListeners>
     <listener class="com.jetbrains.lang.dart.DartWorkspaceModelChangeListener" topic="com.intellij.platform.backend.workspace.WorkspaceModelChangeListener"/>

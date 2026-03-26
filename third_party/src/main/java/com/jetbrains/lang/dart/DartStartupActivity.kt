@@ -17,7 +17,6 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.search.FilenameIndex
 import com.intellij.psi.search.GlobalSearchScope
 import com.jetbrains.lang.dart.analyzer.DartAnalysisServerService
-import com.jetbrains.lang.dart.analyzer.DartLspServerRegistrar
 import com.jetbrains.lang.dart.ide.toolingDaemon.DartToolingDaemonService
 import com.jetbrains.lang.dart.projectWizard.DartModuleBuilder
 import com.jetbrains.lang.dart.sdk.DartSdk
@@ -34,11 +33,6 @@ import kotlinx.coroutines.launch
  */
 class DartStartupActivity : ProjectActivity {
   override suspend fun execute(project: Project) {
-    // Register the Dart LSP server programmatically so that our
-    // DartLanguageServerDefinition (with createLauncherBuilder override)
-    // goes directly into lsp4ij's registry without being wrapped.
-    DartLspServerRegistrar.registerIfNeeded(project)
-
     val serviceScope = DartAnalysisServerService.getInstance(project).serviceScope
 
     serviceScope.launch {
