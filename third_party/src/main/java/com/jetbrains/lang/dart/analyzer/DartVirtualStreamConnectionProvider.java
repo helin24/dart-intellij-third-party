@@ -2,11 +2,9 @@
 // that can be found in the LICENSE file.
 package com.jetbrains.lang.dart.analyzer;
 
-import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
 import com.google.gson.JsonParser;
-import com.google.gson.JsonPrimitive;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.project.Project;
@@ -16,6 +14,9 @@ import org.eclipse.lsp4j.CompletionOptions;
 import org.eclipse.lsp4j.InitializeResult;
 import org.eclipse.lsp4j.ServerCapabilities;
 import org.eclipse.lsp4j.jsonrpc.json.MessageJsonHandler;
+import org.eclipse.lsp4j.jsonrpc.json.StreamMessageProducer;
+import org.eclipse.lsp4j.jsonrpc.messages.NotificationMessage;
+import org.eclipse.lsp4j.jsonrpc.messages.RequestMessage;
 import org.eclipse.lsp4j.jsonrpc.messages.ResponseMessage;
 
 import java.io.IOException;
@@ -33,10 +34,11 @@ import java.util.Map;
  * <h3>Architecture</h3>
  * <p>lsp4ij creates a {@code Launcher} that reads LSP responses from
  * {@link #getInputStream()} and writes LSP requests to {@link #getOutputStream()}.
- * A background reader thread reads the outgoing requests from the piped stream,
- * handles protocol-level messages (initialize, shutdown) locally, and forwards
- * supported methods (e.g. {@code textDocument/hover}) to the Dart Analysis
- * Server via its legacy {@code lsp.handle} protocol.</p>
+ * A background thread uses lsp4j's {@link StreamMessageProducer} to read the
+ * outgoing requests from the piped stream, handles protocol-level messages
+ * (initialize, shutdown) locally, and forwards supported methods
+ * (e.g. {@code textDocument/hover}) to the Dart Analysis Server via its
+ * legacy {@code lsp.handle} protocol.</p>
  *
  * <h3>Response path — DartMessageProducer</h3>
  * <p>When a {@link DartMessageProducer} is registered (via
@@ -48,22 +50,17 @@ import java.util.Map;
  * <p>If no producer is registered (fallback mode), responses are written as
  * Content-Length framed bytes to the pipe that feeds {@link #getInputStream()},
  * which lsp4ij's {@code StreamMessageProducer} can read normally.</p>
- *
- * <h3>Why manual Content-Length framing on the request path?</h3>
- * <p>lsp4ij's {@code Launcher} writes properly framed LSP messages (with
- * {@code Content-Length} headers) to {@link #getOutputStream()}. Since we read
- * from the piped end of that stream in our own thread (outside lsp4j's
- * infrastructure), we parse the framing manually.</p>
  */
 class DartVirtualStreamConnectionProvider implements StreamConnectionProvider {
 
   private static final Logger LOG = PluginLogger.INSTANCE.createLogger(DartVirtualStreamConnectionProvider.class);
 
   /**
-   * Gson instance configured with LSP4J type adapters for correct
-   * serialization of types like {@code Either<Boolean, HoverOptions>}.
+   * JSON handler with LSP4J type adapters for parsing incoming LSP requests
+   * and serializing outgoing LSP responses. Uses an empty method map so that
+   * request params are preserved as raw {@code JsonElement} (no type coercion).
    */
-  private static final Gson LSP_GSON = new MessageJsonHandler(Map.of()).getGson();
+  private static final MessageJsonHandler JSON_HANDLER = new MessageJsonHandler(Map.of());
 
   // lsp4ij reads LSP responses from ideInputStream.
   // We write responses into serverOutputStream, which is piped to ideInputStream.
@@ -72,12 +69,13 @@ class DartVirtualStreamConnectionProvider implements StreamConnectionProvider {
   private final PipedOutputStream serverOutputStream = new PipedOutputStream();
 
   // lsp4ij writes LSP requests into ideOutputStream.
-  // Our background thread reads from serverInputStream, which is piped to ideOutputStream.
+  // Our background thread reads from serverInputStream via StreamMessageProducer.
   private final PipedInputStream serverInputStream = new PipedInputStream(1024 * 1024);
   private final PipedOutputStream ideOutputStream = new PipedOutputStream();
 
   private final Project project;
   private volatile boolean alive = false;
+  private volatile StreamMessageProducer requestReader;
 
   DartVirtualStreamConnectionProvider(Project project) {
     this.project = project;
@@ -109,6 +107,14 @@ class DartVirtualStreamConnectionProvider implements StreamConnectionProvider {
   @Override
   public void stop() {
     alive = false;
+    // Stop the StreamMessageProducer to unblock the listen() loop
+    if (requestReader != null) {
+      requestReader.close();
+    }
+    try {
+      serverInputStream.close();
+    } catch (IOException ignored) {
+    }
     // Clean up the producer registration
     DartMessageProducer producer = DartMessageProducerRegistry.get(project);
     if (producer != null) {
@@ -142,9 +148,10 @@ class DartVirtualStreamConnectionProvider implements StreamConnectionProvider {
   }
 
   /**
-   * Main loop that reads LSP messages from lsp4ij, handles protocol-level
-   * messages locally (initialize, shutdown), and forwards supported LSP
-   * methods (textDocument/hover) to the Dart Analysis Server.
+   * Main loop that reads LSP messages from lsp4ij using lsp4j's
+   * {@link StreamMessageProducer}, handles protocol-level messages locally
+   * (initialize, shutdown), and forwards supported LSP methods
+   * (textDocument/hover) to the Dart Analysis Server.
    */
   private void runVirtualServer() {
     DartAnalysisServerService dasService = DartAnalysisServerService.getInstance(project);
@@ -171,28 +178,30 @@ class DartVirtualStreamConnectionProvider implements StreamConnectionProvider {
     dasService.addResponseListener(dasListener);
 
     try {
-      while (alive) {
-        String jsonPayload = readNextMessage(serverInputStream);
-        if (jsonPayload == null) break;
-
+      requestReader = new StreamMessageProducer(serverInputStream, JSON_HANDLER);
+      requestReader.listen(message -> {
         try {
-          JsonObject lspMessage = JsonParser.parseString(jsonPayload).getAsJsonObject();
-          String method = lspMessage.has("method") ? lspMessage.get("method").getAsString() : null;
-
-          if ("initialize".equals(method)) {
-            handleInitialize(lspMessage);
-          } else if ("shutdown".equals(method)) {
-            handleShutdown(lspMessage);
-          } else if ("textDocument/hover".equals(method)) {
-            LOG.info("★★★ LSP-over-legacy: Received hover request via lsp4ij ★★★");
-            forwardToDas(dasService, lspMessage);
-          } else {
-            LOG.debug("Ignored lsp4ij request: " + method);
+          if (message instanceof RequestMessage request) {
+            String method = request.getMethod();
+            if ("initialize".equals(method)) {
+              handleInitialize(request);
+            } else if ("shutdown".equals(method)) {
+              handleShutdown(request);
+            } else if ("textDocument/hover".equals(method)) {
+              LOG.info("★★★ LSP-over-legacy: Received hover request via lsp4ij ★★★");
+              forwardToDas(dasService, request);
+            } else {
+              LOG.debug("Ignored lsp4ij request: " + method);
+            }
+          } else if (message instanceof NotificationMessage notification) {
+            LOG.debug("Ignored lsp4ij notification: " + notification.getMethod());
           }
-        } catch (JsonParseException e) {
-          LOG.warn("Failed to parse lsp4ij message", e);
+        } catch (IOException e) {
+          if (alive) {
+            LOG.warn("Error handling LSP message", e);
+          }
         }
-      }
+      });
     } catch (Exception e) {
       if (alive) {
         LOG.warn("Virtual Dart Server stream exception", e);
@@ -227,7 +236,7 @@ class DartVirtualStreamConnectionProvider implements StreamConnectionProvider {
    * Sends a fake {@code initialize} response to lsp4ij with the capabilities
    * we currently proxy (hover). Uses LSP4J POJOs for type-safe construction.
    */
-  private void handleInitialize(JsonObject lspMessage) throws IOException {
+  private void handleInitialize(RequestMessage request) throws IOException {
     ServerCapabilities capabilities = new ServerCapabilities();
     capabilities.setHoverProvider(true);
 
@@ -239,49 +248,38 @@ class DartVirtualStreamConnectionProvider implements StreamConnectionProvider {
 
     ResponseMessage response = new ResponseMessage();
     response.setJsonrpc("2.0");
-    copyRequestId(lspMessage, response);
+    response.setId(request.getId());
     response.setResult(initResult);
 
-    sendResponseToLsp4ij(LSP_GSON.toJson(response));
+    sendResponseToLsp4ij(JSON_HANDLER.getGson().toJson(response));
     LOG.info("★★★ LSP-over-legacy: Sent fake initialize response to lsp4ij ★★★");
   }
 
   /**
    * Sends a fake {@code shutdown} response to lsp4ij.
    */
-  private void handleShutdown(JsonObject lspMessage) throws IOException {
-    if (lspMessage.has("id") && !lspMessage.get("id").isJsonNull()) {
-      ResponseMessage response = new ResponseMessage();
-      response.setJsonrpc("2.0");
-      copyRequestId(lspMessage, response);
-      response.setResult(null);
+  private void handleShutdown(RequestMessage request) throws IOException {
+    ResponseMessage response = new ResponseMessage();
+    response.setJsonrpc("2.0");
+    response.setId(request.getId());
+    response.setResult(null);
 
-      sendResponseToLsp4ij(LSP_GSON.toJson(response));
-      LOG.debug("Sent fake shutdown response to lsp4ij");
-    }
-  }
-
-  /**
-   * Copies the {@code id} field from an incoming LSP request ({@link JsonObject})
-   * to an outgoing {@link ResponseMessage}, handling both string and numeric IDs.
-   */
-  private static void copyRequestId(JsonObject lspMessage, ResponseMessage response) {
-    if (!lspMessage.has("id") || lspMessage.get("id").isJsonNull()) return;
-    JsonPrimitive idPrimitive = lspMessage.get("id").getAsJsonPrimitive();
-    if (idPrimitive.isNumber()) {
-      response.setId(idPrimitive.getAsInt());
-    } else {
-      response.setId(idPrimitive.getAsString());
-    }
+    sendResponseToLsp4ij(JSON_HANDLER.getGson().toJson(response));
+    LOG.debug("Sent fake shutdown response to lsp4ij");
   }
 
   /**
    * Forwards an LSP request to the Dart Analysis Server using the legacy
-   * {@code lsp.handle} protocol method. Uses {@link JsonObject} because the
-   * DAS legacy protocol has no LSP4J POJO representation.
+   * {@code lsp.handle} protocol method. Converts the {@link RequestMessage}
+   * to a {@link JsonObject} for embedding in the DAS legacy envelope.
    */
-  private void forwardToDas(DartAnalysisServerService dasService, JsonObject lspMessage) {
+  private void forwardToDas(DartAnalysisServerService dasService, RequestMessage request) {
     LOG.debug("Forwarding hover request to Dart server");
+
+    // Convert the LSP request to JsonObject for the DAS legacy protocol envelope.
+    // Since params were parsed with an empty method map, they remain as raw
+    // JsonElement — no number type coercion occurs during this round-trip.
+    JsonObject lspMessage = JSON_HANDLER.getGson().toJsonTree(request).getAsJsonObject();
 
     JsonObject legacyRequest = new JsonObject();
     String legacyId = dasService.generateUniqueId();
@@ -293,66 +291,6 @@ class DartVirtualStreamConnectionProvider implements StreamConnectionProvider {
     legacyRequest.add("params", params);
 
     dasService.sendRequest(legacyId, legacyRequest);
-  }
-
-  /**
-   * Reads the next LSP message from the input stream using the standard
-   * LSP base protocol: reads {@code Content-Length} header, then reads
-   * exactly that many bytes for the JSON body.
-   *
-   * @return the JSON string body, or {@code null} if the stream ended.
-   */
-  private String readNextMessage(InputStream in) throws IOException {
-    StringBuilder headers = new StringBuilder();
-    int c;
-    // Limit header size to 8KB to prevent memory exhaustion
-    final int MAX_HEADER_SIZE = 8192;
-    while ((c = in.read()) != -1) {
-      headers.append((char) c);
-      if (headers.length() > MAX_HEADER_SIZE) {
-        LOG.warn("LSP message headers exceeded maximum size of " + MAX_HEADER_SIZE + " bytes");
-        return null;
-      }
-      if (headers.toString().endsWith("\r\n\r\n")) {
-        break;
-      }
-    }
-    if (c == -1) return null;
-
-    int contentLength = -1;
-    for (String header : headers.toString().split("\r\n")) {
-      if (header.startsWith("Content-Length: ")) {
-        try {
-          contentLength = Integer.parseInt(header.substring("Content-Length: ".length()).trim());
-        } catch (NumberFormatException e) {
-          LOG.warn("Invalid Content-Length header: " + header, e);
-          return null;
-        }
-      }
-    }
-
-    if (contentLength == -1) return null;
-
-    // Limit message body size to 10MB to prevent memory exhaustion
-    final int MAX_BODY_SIZE = 10 * 1024 * 1024;
-    if (contentLength > MAX_BODY_SIZE) {
-      LOG.warn("LSP message body size " + contentLength + " exceeds maximum of " + MAX_BODY_SIZE + " bytes");
-      return null;
-    }
-    if (contentLength < 0) {
-      LOG.warn("Invalid negative Content-Length: " + contentLength);
-      return null;
-    }
-
-    byte[] body = new byte[contentLength];
-    int read = 0;
-    while (read < contentLength) {
-      int r = in.read(body, read, contentLength - read);
-      if (r == -1) return null;
-      read += r;
-    }
-
-    return new String(body, StandardCharsets.UTF_8);
   }
 
   /**
