@@ -15,16 +15,11 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  * <h3>Why this exists</h3>
  * <p>The {@link DartMessageProducer} is created inside
- * {@link DartLanguageServerDefinition#createLauncherBuilder}, but the
+ * {@link DartLauncherBuilder#createMessageProducer}, but the
  * {@link DartVirtualStreamConnectionProvider} (which needs to enqueue
  * DAS responses into the producer) is created separately via
- * {@link DartLanguageServerDefinition#createConnectionProvider}.
+ * {@link DartLanguageServerFactory#createConnectionProvider}.
  * This registry bridges the two.</p>
- *
- * <p><b>This is temporary</b> — once lsp4ij exposes
- * {@code createLauncherBuilder} or {@code createMessageProducer} in
- * {@link com.redhat.devtools.lsp4ij.client.features.LSPClientFeatures},
- * we can wire the producer directly and remove this registry.</p>
  */
 final class DartMessageProducerRegistry {
 
