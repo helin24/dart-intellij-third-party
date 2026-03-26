@@ -2,14 +2,21 @@
 // that can be found in the LICENSE file.
 package com.jetbrains.lang.dart.analyzer;
 
+import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
 import com.google.gson.JsonParser;
+import com.google.gson.JsonPrimitive;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.project.Project;
 import com.jetbrains.lang.dart.logging.PluginLogger;
 import com.redhat.devtools.lsp4ij.server.StreamConnectionProvider;
+import org.eclipse.lsp4j.CompletionOptions;
+import org.eclipse.lsp4j.InitializeResult;
+import org.eclipse.lsp4j.ServerCapabilities;
+import org.eclipse.lsp4j.jsonrpc.json.MessageJsonHandler;
+import org.eclipse.lsp4j.jsonrpc.messages.ResponseMessage;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -17,6 +24,7 @@ import java.io.OutputStream;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.Map;
 
 /**
  * A virtual stream connection provider that bridges lsp4ij (LSP client) and
@@ -50,6 +58,12 @@ import java.nio.charset.StandardCharsets;
 class DartVirtualStreamConnectionProvider implements StreamConnectionProvider {
 
   private static final Logger LOG = PluginLogger.INSTANCE.createLogger(DartVirtualStreamConnectionProvider.class);
+
+  /**
+   * Gson instance configured with LSP4J type adapters for correct
+   * serialization of types like {@code Either<Boolean, HoverOptions>}.
+   */
+  private static final Gson LSP_GSON = new MessageJsonHandler(Map.of()).getGson();
 
   // lsp4ij reads LSP responses from ideInputStream.
   // We write responses into serverOutputStream, which is piped to ideInputStream.
@@ -211,26 +225,24 @@ class DartVirtualStreamConnectionProvider implements StreamConnectionProvider {
 
   /**
    * Sends a fake {@code initialize} response to lsp4ij with the capabilities
-   * we currently proxy (hover). Uses Gson objects to construct the JSON safely,
-   * avoiding JSON injection via raw string concatenation.
+   * we currently proxy (hover). Uses LSP4J POJOs for type-safe construction.
    */
   private void handleInitialize(JsonObject lspMessage) throws IOException {
-    JsonObject response = new JsonObject();
-    response.addProperty("jsonrpc", "2.0");
-    response.add("id", lspMessage.get("id"));
+    ServerCapabilities capabilities = new ServerCapabilities();
+    capabilities.setHoverProvider(true);
 
-    JsonObject capabilities = new JsonObject();
-    capabilities.addProperty("hoverProvider", true);
+    CompletionOptions completionOptions = new CompletionOptions();
+    completionOptions.setResolveProvider(false);
+    capabilities.setCompletionProvider(completionOptions);
 
-    JsonObject completionProvider = new JsonObject();
-    completionProvider.addProperty("resolveProvider", false);
-    capabilities.add("completionProvider", completionProvider);
+    InitializeResult initResult = new InitializeResult(capabilities);
 
-    JsonObject result = new JsonObject();
-    result.add("capabilities", capabilities);
-    response.add("result", result);
+    ResponseMessage response = new ResponseMessage();
+    response.setJsonrpc("2.0");
+    copyRequestId(lspMessage, response);
+    response.setResult(initResult);
 
-    sendResponseToLsp4ij(response.toString());
+    sendResponseToLsp4ij(LSP_GSON.toJson(response));
     LOG.info("★★★ LSP-over-legacy: Sent fake initialize response to lsp4ij ★★★");
   }
 
@@ -239,19 +251,34 @@ class DartVirtualStreamConnectionProvider implements StreamConnectionProvider {
    */
   private void handleShutdown(JsonObject lspMessage) throws IOException {
     if (lspMessage.has("id") && !lspMessage.get("id").isJsonNull()) {
-      JsonObject response = new JsonObject();
-      response.addProperty("jsonrpc", "2.0");
-      response.add("id", lspMessage.get("id"));
-      response.add("result", null);
+      ResponseMessage response = new ResponseMessage();
+      response.setJsonrpc("2.0");
+      copyRequestId(lspMessage, response);
+      response.setResult(null);
 
-      sendResponseToLsp4ij(response.toString());
-      LOG.debug("Sent fake shutdown response to lsp4ij via streams");
+      sendResponseToLsp4ij(LSP_GSON.toJson(response));
+      LOG.debug("Sent fake shutdown response to lsp4ij");
+    }
+  }
+
+  /**
+   * Copies the {@code id} field from an incoming LSP request ({@link JsonObject})
+   * to an outgoing {@link ResponseMessage}, handling both string and numeric IDs.
+   */
+  private static void copyRequestId(JsonObject lspMessage, ResponseMessage response) {
+    if (!lspMessage.has("id") || lspMessage.get("id").isJsonNull()) return;
+    JsonPrimitive idPrimitive = lspMessage.get("id").getAsJsonPrimitive();
+    if (idPrimitive.isNumber()) {
+      response.setId(idPrimitive.getAsInt());
+    } else {
+      response.setId(idPrimitive.getAsString());
     }
   }
 
   /**
    * Forwards an LSP request to the Dart Analysis Server using the legacy
-   * {@code lsp.handle} protocol method.
+   * {@code lsp.handle} protocol method. Uses {@link JsonObject} because the
+   * DAS legacy protocol has no LSP4J POJO representation.
    */
   private void forwardToDas(DartAnalysisServerService dasService, JsonObject lspMessage) {
     LOG.debug("Forwarding hover request to Dart server");
