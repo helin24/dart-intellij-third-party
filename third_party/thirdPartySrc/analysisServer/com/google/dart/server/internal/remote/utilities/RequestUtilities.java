@@ -1051,12 +1051,26 @@ public class RequestUtilities {
   public static JsonObject generateClientCapabilities(String idValue,
                                                       List<String> requests,
                                                       boolean supportsUris,
-                                                      boolean supportsWorkspaceApplyEdits) {
+                                                      Object lspCapabilities) {
     JsonObject params = new JsonObject();
     params.add(REQUESTS, buildJsonElement(requests));
     if (supportsUris) {
       params.addProperty("supportsUris", supportsUris);
     }
+
+    if (lspCapabilities != null) {
+      if (lspCapabilities instanceof JsonElement) {
+        params.add("lspCapabilities", (JsonElement) lspCapabilities);
+      } else {
+        params.add("lspCapabilities", buildJsonElement(lspCapabilities));
+      }
+    }
+
+    return buildJsonObjectRequest(idValue, METHOD_SERVER_SET_CAPABILITIES, params);
+  }
+
+  public static JsonObject constructLspCapabilities(boolean supportsWorkspaceApplyEdits) {
+    JsonObject lspCapabilities = new JsonObject();
 
     if (supportsWorkspaceApplyEdits) {
       JsonObject workspace = new JsonObject();
@@ -1066,13 +1080,10 @@ public class RequestUtilities {
       workspaceEdit.addProperty("documentChanges", false);
       workspace.add("workspaceEdit", workspaceEdit);
 
-      JsonObject lspCapabilities = new JsonObject();
       lspCapabilities.add("workspace", workspace);
-
-      params.add("lspCapabilities", lspCapabilities);
     }
 
-    return buildJsonObjectRequest(idValue, METHOD_SERVER_SET_CAPABILITIES, params);
+    return lspCapabilities.size() > 0 ? lspCapabilities : null;
   }
 
   public static JsonObject generateConnectToDtd(String idValue, String uri) {

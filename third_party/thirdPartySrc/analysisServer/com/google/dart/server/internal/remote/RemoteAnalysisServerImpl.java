@@ -40,14 +40,15 @@ import com.google.dart.server.GetNavigationConsumer;
 import com.google.dart.server.GetPostfixCompletionConsumer;
 import com.google.dart.server.GetReachableSourcesConsumer;
 import com.google.dart.server.GetRefactoringConsumer;
-import com.google.dart.server.GetRuntimeCompletionConsumer;
 import com.google.dart.server.GetServerPortConsumer;
 import com.google.dart.server.GetSignatureConsumer;
 import com.google.dart.server.GetStatementCompletionConsumer;
 import com.google.dart.server.GetSuggestionDetailsConsumer;
-import com.google.dart.server.GetSuggestionDetailsConsumer2;
+import com.google.dart.server.GetSuggestionDetails2Consumer;
 import com.google.dart.server.GetSuggestionsConsumer;
-import com.google.dart.server.GetSuggestionsConsumer2;
+import com.google.dart.server.GetSuggestions2Consumer;
+import com.google.dart.server.FormatIfEnabledConsumer;
+import com.google.dart.server.HandleConsumer;
 import com.google.dart.server.GetTypeHierarchyConsumer;
 import com.google.dart.server.GetVersionConsumer;
 import com.google.dart.server.GetWidgetDescriptionConsumer;
@@ -68,7 +69,6 @@ import com.google.dart.server.generated.AnalysisServer;
 import com.google.dart.server.internal.BroadcastAnalysisServerListener;
 import com.google.dart.server.internal.remote.processor.AnalysisErrorsProcessor;
 import com.google.dart.server.internal.remote.processor.AssistsProcessor;
-import com.google.dart.server.internal.remote.processor.CompletionIdProcessor;
 import com.google.dart.server.internal.remote.processor.CompletionIdProcessor2;
 import com.google.dart.server.internal.remote.processor.CreateContextProcessor;
 import com.google.dart.server.internal.remote.processor.DartLspTextDocumentContentProcessor;
@@ -302,6 +302,11 @@ public abstract class RemoteAnalysisServerImpl implements AnalysisServer {
   }
 
   @Override
+  public void removeStatusListener(AnalysisServerStatusListener listener) {
+    statusListenerList.remove(listener);
+  }
+
+  @Override
   public void analysis_getErrors(String file, GetErrorsConsumer consumer) {
     String id = generateUniqueId();
     sendRequestToServer(id, RequestUtilities.generateAnalysisGetErrors(id, file), consumer);
@@ -429,29 +434,21 @@ public abstract class RemoteAnalysisServerImpl implements AnalysisServer {
     // this call is now deprecated in the Analysis Server, a future syncs with the protocol will remove this method
   }
 
-  @Override
-  public void completion_getSuggestionDetails(String file, int id, String label, int offset, GetSuggestionDetailsConsumer consumer) {
-    String requestId = generateUniqueId();
-    sendRequestToServer(requestId, RequestUtilities.generateCompletionGetSuggestionDetails(requestId, file, id, label, offset), consumer);
-  }
+
 
   @Override
   public void completion_getSuggestionDetails2(String file,
                                                int offset,
                                                String completion,
                                                String libraryUri,
-                                               GetSuggestionDetailsConsumer2 consumer) {
+                                               GetSuggestionDetails2Consumer consumer) {
     String requestId = generateUniqueId();
     sendRequestToServer(requestId,
                         RequestUtilities.generateCompletionGetSuggestionDetails2(requestId, file, offset, completion, libraryUri),
                         consumer);
   }
 
-  @Override
-  public void completion_getSuggestions(String file, int offset, GetSuggestionsConsumer consumer) {
-    String id = generateUniqueId();
-    sendRequestToServer(id, RequestUtilities.generateCompletionGetSuggestions(id, file, offset), consumer);
-  }
+
 
   @Override
   public void completion_getSuggestions2(String file,
@@ -461,19 +458,12 @@ public abstract class RemoteAnalysisServerImpl implements AnalysisServer {
                                          String completionMode,
                                          int invocationCount,
                                          int timeout,
-                                         GetSuggestionsConsumer2 consumer) {
+                                         GetSuggestions2Consumer consumer) {
     String id = generateUniqueId();
     sendRequestToServer(id, RequestUtilities.generateCompletionGetSuggestions2(id, file, offset, maxResults, completionCaseMatchingMode, completionMode, invocationCount, timeout), consumer);
   }
 
-  @Override
-  public void completion_setSubscriptions(List<String> subscriptions) {
-    String id = generateUniqueId();
-    if (subscriptions == null) {
-      subscriptions = StringUtilities.EMPTY_LIST;
-    }
-    sendRequestToServer(id, RequestUtilities.generateCompletionSetSubscriptions(id, subscriptions));
-  }
+
 
 
   @Override
@@ -496,7 +486,7 @@ public abstract class RemoteAnalysisServerImpl implements AnalysisServer {
   }
 
   @Override
-  public void edit_formatIfEnabled(List<String> directories, FormatConsumer consumer) {}
+  public void edit_formatIfEnabled(List<String> directories, FormatIfEnabledConsumer consumer) {}
 
   @Override
   public void edit_getAssists(String file, int offset, int length, GetAssistsConsumer consumer) {
@@ -587,16 +577,16 @@ public abstract class RemoteAnalysisServerImpl implements AnalysisServer {
                                        int contextOffset,
                                        List<RuntimeCompletionVariable> variables,
                                        List<RuntimeCompletionExpression> expressions,
-                                       GetRuntimeCompletionConsumer consumer) {
-    String id = generateUniqueId();
-    sendRequestToServer(id,
-                        RequestUtilities.generateExecutionGetSuggestions(
-                          id,
-                          code, offset,
-                          contextFile, contextOffset,
-                          variables, expressions),
-                        consumer);
-  }
+                                       GetSuggestionsConsumer consumer) {
+     String id = generateUniqueId();
+     sendRequestToServer(id,
+                         RequestUtilities.generateExecutionGetSuggestions(
+                           id,
+                           code, offset,
+                           contextFile, contextOffset,
+                           variables, expressions),
+                         consumer);
+   }
 
   @Override
   public void execution_mapUri(String contextId, String file, String uri, MapUriConsumer consumer) {
@@ -698,21 +688,32 @@ public abstract class RemoteAnalysisServerImpl implements AnalysisServer {
   }
 
   @Override
-  public void server_setClientCapabilities(List<String> requests, boolean supportsUris, boolean supportsWorkspaceApplyEdits) {
+  public void server_setClientCapabilities(List<String> requests, boolean supportsUris, Object lspCapabilities) {
     String id = generateUniqueId();
     if (requests == null) {
       requests = StringUtilities.EMPTY_LIST;
     }
-    sendRequestToServer(id, RequestUtilities.generateClientCapabilities(id, requests, supportsUris, supportsWorkspaceApplyEdits));
+    sendRequestToServer(id, RequestUtilities.generateClientCapabilities(id, requests, supportsUris, lspCapabilities));
   }
 
-  @Override
+  public void server_setClientCapabilities(List<String> requests,
+                                           boolean supportsUris,
+                                           boolean supportsWorkspaceApplyEdits) {
+    JsonObject lspCapabilities = RequestUtilities.constructLspCapabilities(supportsWorkspaceApplyEdits);
+    server_setClientCapabilities(requests, supportsUris, lspCapabilities);
+  }
+
   public void lsp_connectToDtd(String uri) {
     String id = generateUniqueId();
     sendRequestToServer(id, RequestUtilities.generateConnectToDtd(id, uri), new BasicConsumer() {
       @Override
       public void received() { }
     });
+  }
+
+  @Override
+  public void lsp_handle(Object lspMessage, HandleConsumer consumer) {
+    // stub
   }
 
   @Override
@@ -740,6 +741,8 @@ public abstract class RemoteAnalysisServerImpl implements AnalysisServer {
     String id = generateUniqueId();
     sendRequestToServer(id, RequestUtilities.generateLSPMessage_dart_textDocumentContent(id, uri), consumer);
   }
+
+  public abstract void lsp_workspaceApplyEdit(DartLspApplyWorkspaceEditParams params, DartLspWorkspaceApplyEditRequestConsumer consumer);
 
   /**
    * Starts the analysis server.
@@ -1069,14 +1072,11 @@ public abstract class RemoteAnalysisServerImpl implements AnalysisServer {
     else if (consumer instanceof GetSuggestionDetailsConsumer) {
       new GetSuggestionDetailsProcessor((GetSuggestionDetailsConsumer)consumer).process(resultObject, requestError);
     }
-    else if (consumer instanceof GetSuggestionsConsumer) {
-      new CompletionIdProcessor((GetSuggestionsConsumer)consumer).process(resultObject, requestError);
+    else if (consumer instanceof GetSuggestionDetails2Consumer) {
+      new GetSuggestionDetailsProcessor2((GetSuggestionDetails2Consumer)consumer).process(resultObject, requestError);
     }
-    else if (consumer instanceof GetSuggestionDetailsConsumer2) {
-      new GetSuggestionDetailsProcessor2((GetSuggestionDetailsConsumer2)consumer).process(resultObject, requestError);
-    }
-    else if (consumer instanceof GetSuggestionsConsumer2) {
-      new CompletionIdProcessor2((GetSuggestionsConsumer2)consumer).process(resultObject, requestError);
+    else if (consumer instanceof GetSuggestions2Consumer) {
+      new CompletionIdProcessor2((GetSuggestions2Consumer)consumer).process(resultObject, requestError);
     }
     //
     // Search Domain
@@ -1157,8 +1157,8 @@ public abstract class RemoteAnalysisServerImpl implements AnalysisServer {
     else if (consumer instanceof CreateContextConsumer) {
       new CreateContextProcessor((CreateContextConsumer)consumer).process(resultObject, requestError);
     }
-    else if (consumer instanceof GetRuntimeCompletionConsumer) {
-      new GetRuntimeCompletionProcessor((GetRuntimeCompletionConsumer)consumer).process(resultObject, requestError);
+    else if (consumer instanceof GetSuggestionsConsumer) {
+      new GetRuntimeCompletionProcessor((GetSuggestionsConsumer)consumer).process(resultObject, requestError);
     }
     else if (consumer instanceof MapUriConsumer) {
       new MapUriProcessor((MapUriConsumer)consumer).process(resultObject, requestError);

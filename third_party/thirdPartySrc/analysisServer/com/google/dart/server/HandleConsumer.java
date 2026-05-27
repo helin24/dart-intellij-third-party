@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, the Dart project authors.
+ * Copyright (c) 2026, the Dart project authors.
  *
  * Licensed under the Eclipse Public License v1.0 (the "License"); you may not use this file except
  * in compliance with the License. You may obtain a copy of the License at
@@ -13,14 +13,24 @@
  */
 package com.google.dart.server;
 
-import org.dartlang.analysis.server.protocol.CompletionSuggestion;
 import org.dartlang.analysis.server.protocol.RequestError;
-import org.dartlang.analysis.server.protocol.RuntimeCompletionExpression;
 
-import java.util.List;
+/**
+ * The interface {@code HandleConsumer} defines the behavior of objects that consume the results of
+ * an {@code lsp.handle} request.
+ */
+public interface HandleConsumer extends Consumer {
+  /**
+   * The result of the LSP message has been computed.
+   *
+   * @param lspResponse the LSP ResponseMessage returned by the handler
+   */
+  public void computedLspResponse(Object lspResponse);
 
-public interface GetSuggestionsConsumer extends Consumer {
-  public void computedResult(List<CompletionSuggestion> suggestions, List<RuntimeCompletionExpression> expressions);
-
+  /**
+   * If an error occurred, some {@link RequestError} is passed back instead.
+   *
+   * @param requestError the reason why a result was not passed back
+   */
   public void onError(RequestError requestError);
 }

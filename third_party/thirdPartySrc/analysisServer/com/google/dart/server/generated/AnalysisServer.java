@@ -32,7 +32,7 @@ public interface AnalysisServer {
 
   /**
    * Add the given listener to the list of listeners that will receive notification when
-   * requests are made by an analysis server client.
+     * requests are made by an analysis server client.
    *
    * @param listener the listener to be added
    */
@@ -63,7 +63,7 @@ public interface AnalysisServer {
    * errors for the file cannot be computed, then the subset of the errors that can be computed will
    * be returned and the response will contain an error to indicate why the errors could not be
    * computed. If the content of the file changes after this request was received but before a
-   * response could be sent, then an error of type CONTENT_MODIFIED will be generated.
+   * response could be sent, then an error of type <code>CONTENT_MODIFIED</code> will be generated.
    *
    * This request is intended to be used by clients that cannot asynchronously apply updated error
    * information. Clients that can apply error information as it becomes available should use the
@@ -71,7 +71,8 @@ public interface AnalysisServer {
    *
    * If a request is made for a file which does not exist, or which is not currently subject to
    * analysis (e.g. because it is not associated with any analysis root specified to
-   * analysis.setAnalysisRoots), an error of type GET_ERRORS_INVALID_FILE will be generated.
+   * analysis.setAnalysisRoots), an error of type <code>GET_ERRORS_INVALID_FILE</code> will be
+   * generated.
    *
    * @param file The file for which errors are being requested.
    */
@@ -80,7 +81,7 @@ public interface AnalysisServer {
   /**
    * {@code analysis.getHover}
    *
-   * Return the hover information associate with the given location. If some or all of the hover
+   * Return the hover information associated with the given location. If some or all of the hover
    * information is not available at the time this request is processed the information will be
    * omitted from the response.
    *
@@ -97,8 +98,8 @@ public interface AnalysisServer {
    *
    * If a request is made for a file that does not exist, or that is not currently subject to
    * analysis (e.g. because it is not associated with any analysis root specified via
-   * analysis.setAnalysisRoots), an error of type GET_IMPORTED_ELEMENTS_INVALID_FILE will be
-   * generated.
+   * analysis.setAnalysisRoots), an error of type <code>GET_IMPORTED_ELEMENTS_INVALID_FILE</code>
+   * will be generated.
    *
    * @param file The file in which import information is being requested.
    * @param offset The offset of the region for which import information is being requested.
@@ -125,7 +126,7 @@ public interface AnalysisServer {
    * computed navigation information for the given file is out of date, then the response for this
    * request will be delayed until it has been computed. If the content of the file changes after
    * this request was received but before a response could be sent, then an error of type
-   * CONTENT_MODIFIED will be generated.
+   * <code>CONTENT_MODIFIED</code> will be generated.
    *
    * If a navigation region overlaps (but extends either before or after) the given region of the
    * file it will be included in the result. This means that it is theoretically possible to get the
@@ -135,7 +136,8 @@ public interface AnalysisServer {
    *
    * If a request is made for a file which does not exist, or which is not currently subject to
    * analysis (e.g. because it is not associated with any analysis root specified to
-   * analysis.setAnalysisRoots), an error of type GET_NAVIGATION_INVALID_FILE will be generated.
+   * analysis.setAnalysisRoots), an error of type <code>GET_NAVIGATION_INVALID_FILE</code> will be
+   * generated.
    *
    * @param file The file in which navigation information is being requested.
    * @param offset The offset of the region for which navigation information is being requested.
@@ -150,8 +152,8 @@ public interface AnalysisServer {
    *
    * If a request is made for a file which does not exist, or which is not currently subject to
    * analysis (e.g. because it is not associated with any analysis root specified to
-   * analysis.setAnalysisRoots), an error of type GET_REACHABLE_SOURCES_INVALID_FILE will be
-   * generated.
+   * analysis.setAnalysisRoots), an error of type <code>GET_REACHABLE_SOURCES_INVALID_FILE</code>
+   * will be generated.
    *
    * @param file The file for which reachable source information is being requested.
    *
@@ -168,12 +170,12 @@ public interface AnalysisServer {
    * request will be delayed until it has been computed. If a request is made for a file which does
    * not exist, or which is not currently subject to analysis (e.g. because it is not associated with
    * any analysis root specified to analysis.setAnalysisRoots), an error of type
-   * GET_SIGNATURE_INVALID_FILE will be generated. If the location given is not inside the argument
-   * list for a function (including method and constructor) invocation, then an error of type
-   * GET_SIGNATURE_INVALID_OFFSET will be generated. If the location is inside an argument list but
-   * the function is not defined or cannot be determined (such as a method invocation where the
-   * target has type 'dynamic') then an error of type GET_SIGNATURE_UNKNOWN_FUNCTION will be
-   * generated.
+   * <code>GET_SIGNATURE_INVALID_FILE</code> will be generated. If the location given is not inside
+   * the argument list for a function (including method and constructor) invocation, then an error of
+   * type <code>GET_SIGNATURE_INVALID_OFFSET</code> will be generated. If the location is inside an
+   * argument list but the function is not defined or cannot be determined (such as a method
+   * invocation where the target has type 'dynamic') then an error of type
+   * <code>GET_SIGNATURE_UNKNOWN_FUNCTION</code> will be generated.
    *
    * @param file The file in which signature information is being requested.
    * @param offset The location for which signature information is being requested.
@@ -201,12 +203,12 @@ public interface AnalysisServer {
    * analysis roots at any given time is the intersection of this set with the set of files and
    * directories actually present on the filesystem. When the filesystem changes, the actual set of
    * analysis roots is automatically updated, but the set of requested analysis roots is unchanged.
-   * This means that if the client sets an analysis root before the root becomes visible to server in
-   * the filesystem, there is no error; once the server sees the root in the filesystem it will start
-   * analyzing it. Similarly, server will stop analyzing files that are removed from the file system
-   * but they will remain in the set of requested roots.
+   * This means that if the client sets an analysis root before the root becomes visible to the
+   * server in the filesystem, there is no error; once the server sees the root in the filesystem it
+   * will start analyzing it. Similarly, the server will stop analyzing files that are removed from
+   * the file system but they will remain in the set of requested roots.
    *
-   * If an included path represents a file, then server will look in the directory containing the
+   * If an included path represents a file, then the server will look in the directory containing the
    * file for a pubspec.yaml file. If none is found, then the parents of the directory will be
    * searched until such a file is found or the root of the file system is reached. If such a file is
    * found, it will be used to resolve package: URI's within the file.
@@ -295,7 +297,7 @@ public interface AnalysisServer {
    *
    * Update the content of one or more files. Files that were previously updated but not included in
    * this update remain unchanged. This effectively represents an overlay of the filesystem. The
-   * files whose content is overridden are therefore seen by server as being files with the given
+   * files whose content is overridden are therefore seen by the server as being files with the given
    * content, even if the files do not exist on the filesystem or if the file path represents the
    * path to a directory on the filesystem.
    *
@@ -322,29 +324,38 @@ public interface AnalysisServer {
   /**
    * {@code analytics.enable}
    *
+   * Deprecated: this option is no longer supported.
+   *
    * Enable or disable the sending of analytics data. Note that there are other ways for users to
    * change this setting, so clients cannot assume that they have complete control over this setting.
-   * In particular, there is no guarantee that the result returned by the isEnabled request will
-   * match the last value set via this request.
+   * In particular, there is no guarantee that the result returned by the <code>isEnabled</code>
+   * request will match the last value set via this request.
    *
    * @param value Enable or disable analytics.
+   *
+   * @deprecated
    */
   public void analytics_enable(boolean value);
 
   /**
    * {@code analytics.isEnabled}
    *
+   * Deprecated: this flag is no longer supported.
+   *
    * Query whether analytics is enabled.
    *
    * This flag controls whether the analysis server sends any analytics data to the cloud. If
    * disabled, the analysis server does not send any analytics data, and any data sent to it by
-   * clients (from sendEvent and sendTiming) will be ignored.
+   * clients (from <code>sendEvent</code> and <code>sendTiming</code>) will be ignored.
    *
    * The value of this flag can be changed by other tools outside of the analysis server's process.
    * When you query the flag, you get the value of the flag at a given moment. Clients should not use
-   * the value returned to decide whether or not to send the sendEvent and sendTiming requests. Those
-   * requests should be used unconditionally and server will determine whether or not it is
-   * appropriate to forward the information to the cloud at the time each request is received.
+   * the value returned to decide whether or not to send the <code>sendEvent</code> and
+   * <code>sendTiming</code> requests. Those requests should be used unconditionally and server will
+   * determine whether or not it is appropriate to forward the information to the cloud at the time
+   * each request is received.
+   *
+   * @deprecated
    */
   public void analytics_isEnabled(IsEnabledConsumer consumer);
 
@@ -356,11 +367,12 @@ public interface AnalysisServer {
    * Ask the analysis server to include the fact that an action was performed in the client as part
    * of the analytics data being sent. The data will only be included if the sending of analytics
    * data is enabled at the time the request is processed. The action that was performed is indicated
-   * by the value of the action field.
+   * by the value of the <code>action</code> field.
    *
    * The value of the action field should not include the identity of the client. The analytics data
-   * sent by server will include the client id passed in using the --client-id command-line argument.
-   * The request will be ignored if the client id was not provided when server was started.
+   * sent by server will include the client id passed in using the <code>--client-id</code>
+   * command-line argument. The request will be ignored if the client id was not provided when server
+   * was started.
    *
    * @param action The value used to indicate which action was performed.
    */
@@ -376,8 +388,9 @@ public interface AnalysisServer {
    * the time the request is processed.
    *
    * The value of the event field should not include the identity of the client. The analytics data
-   * sent by server will include the client id passed in using the --client-id command-line argument.
-   * The request will be ignored if the client id was not provided when server was started.
+   * sent by server will include the client id passed in using the <code>--client-id</code>
+   * command-line argument. The request will be ignored if the client id was not provided when server
+   * was started.
    *
    * @param event The name of the event.
    * @param millis The duration of the event in milliseconds.
@@ -385,50 +398,25 @@ public interface AnalysisServer {
   public void analytics_sendTiming(String event, int millis);
 
   /**
-   * {@code completion.getSuggestionDetails}
-   *
-   * Clients must make this request when the user has selected a completion suggestion from an
-   * AvailableSuggestionSet. Analysis server will respond with the text to insert as well as any
-   * SourceChange that needs to be applied in case the completion requires an additional import to be
-   * added. It is an error if the id is no longer valid, for instance if the library has been removed
-   * after the completion suggestion is accepted.
-   *
-   * @param file The path of the file into which this completion is being inserted.
-   * @param id The identifier of the AvailableSuggestionSet containing the selected label.
-   * @param label The label from the AvailableSuggestionSet with the `id` for which insertion
-   *        information is requested.
-   * @param offset The offset in the file where the completion will be inserted.
-   */
-  public void completion_getSuggestionDetails(String file, int id, String label, int offset, GetSuggestionDetailsConsumer consumer);
-
-  /**
    * {@code completion.getSuggestionDetails2}
    *
    * Clients must make this request when the user has selected a completion suggestion with the
-   * isNotImported field set to true. The server will respond with the text to insert, as well as any
-   * SourceChange that needs to be applied in case the completion requires an additional import to be
-   * added. The text to insert might be different from the original suggestion to include an import
-   * prefix if the library will be imported with a prefix to avoid shadowing conflicts in the file.
+   * <code>isNotImported</code> field set to <code>true</code>. The server will respond with the text
+   * to insert, as well as any <code>SourceChange</code> that needs to be applied in case the
+   * completion requires an additional import to be added. The text to insert might be different from
+   * the original suggestion to include an import prefix if the library will be imported with a
+   * prefix to avoid shadowing conflicts in the file.
    *
    * @param file The path of the file into which this completion is being inserted.
    * @param offset The offset in the file where the completion will be inserted.
-   * @param completion The completion from the selected CompletionSuggestion. It could be a name of a
-   *        class, or a name of a constructor in form "typeName.constructorName()", or an enumeration
-   *        constant in form "enumName.constantName", etc.
+   * @param completion The <code>completion</code> from the selected
+   *        <code>CompletionSuggestion</code>. It could be a name of a class, or a name of a
+   *        constructor in the form "typeName.constructorName()", or an enumeration constant in the
+   *        form "enumName.constantName", etc.
    * @param libraryUri The URI of the library to import, so that the element referenced in the
-   *        completion becomes accessible.
+   *        <code>completion</code> becomes accessible.
    */
-  public void completion_getSuggestionDetails2(String file, int offset, String completion, String libraryUri, GetSuggestionDetailsConsumer2 consumer);
-
-  /**
-   * {@code completion.getSuggestions}
-   *
-   * Request that completion suggestions for the given offset in the given file be returned.
-   *
-   * @param file The file containing the point at which suggestions are to be made.
-   * @param offset The offset within the file at which suggestions are to be made.
-   */
-  public void completion_getSuggestions(String file, int offset, GetSuggestionsConsumer consumer);
+  public void completion_getSuggestionDetails2(String file, int offset, String completion, String libraryUri, GetSuggestionDetails2Consumer consumer);
 
   /**
    * {@code completion.getSuggestions2}
@@ -439,11 +427,13 @@ public interface AnalysisServer {
    * @param file The file containing the point at which suggestions are to be made.
    * @param offset The offset within the file at which suggestions are to be made.
    * @param maxResults The maximum number of suggestions to return. If the number of suggestions
-   *        after filtering is greater than the maxResults, then isIncomplete is set to true.
+   *        after filtering is greater than the <code>maxResults</code>, then
+   *        <code>isIncomplete</code> is set to <code>true</code>.
    * @param completionCaseMatchingMode The mode of code completion being invoked. If no value is
-   *        provided, MATCH_FIRST_CHAR will be assumed.
-   * @param completionMode The mode of code completion being invoked. If no value is provided, BASIC
-   *        will be assumed. BASIC is also the only currently supported.
+   *        provided, <code>MATCH_FIRST_CHAR</code> will be assumed.
+   * @param completionMode The mode of code completion being invoked. If no value is provided,
+   *        <code>BASIC</code> will be assumed. <code>BASIC</code> is also the only currently
+   *        supported.
    * @param invocationCount The number of times that the user has invoked code completion at the same
    *        code location, counting from 1. If no value is provided, 1 will be assumed.
    * @param timeout The approximate time in milliseconds that the server should spend. The server
@@ -451,16 +441,16 @@ public interface AnalysisServer {
    *        field is intended to be used for benchmarking, and usually should not be provided, so
    *        that the default timeout is used.
    */
-  public void completion_getSuggestions2(String file, int offset, int maxResults, String completionCaseMatchingMode, String completionMode, int invocationCount, int timeout, GetSuggestionsConsumer2 consumer);
+  public void completion_getSuggestions2(String file, int offset, int maxResults, String completionCaseMatchingMode, String completionMode, int invocationCount, int timeout, GetSuggestions2Consumer consumer);
 
   /**
    * {@code completion.registerLibraryPaths}
    *
    * The client can make this request to express interest in certain libraries to receive completion
    * suggestions from based on the client path. If this request is received before the client has
-   * used 'completion.setSubscriptions' to subscribe to the AVAILABLE_SUGGESTION_SETS service, then
-   * an error of type NOT_SUBSCRIBED_TO_AVAILABLE_SUGGESTION_SETS will be generated. All previous
-   * paths are replaced by the given set of paths.
+   * used 'completion.setSubscriptions' to subscribe to the <code>AVAILABLE_SUGGESTION_SETS</code>
+   * service, then an error of type <code>NOT_SUBSCRIBED_TO_AVAILABLE_SUGGESTION_SETS</code> will be
+   * generated. All previous paths are replaced by the given set of paths.
    *
    * @param paths A list of objects each containing a path and the additional libraries from which
    *        the client is interested in receiving completion suggestions. If one configured path is
@@ -470,19 +460,6 @@ public interface AnalysisServer {
    * @deprecated
    */
   public void completion_registerLibraryPaths(List<LibraryPathSet> paths);
-
-  /**
-   * {@code completion.setSubscriptions}
-   *
-   * Subscribe for completion services. All previous subscriptions are replaced by the given set of
-   * services.
-   *
-   * It is an error if any of the elements in the list are not valid services. If there is an error,
-   * then the current subscriptions will remain unchanged.
-   *
-   * @param subscriptions A list of the services being subscribed to.
-   */
-  public void completion_setSubscriptions(List<String> subscriptions);
 
   /**
    * {@code diagnostic.getDiagnostics}
@@ -496,7 +473,7 @@ public interface AnalysisServer {
    *
    * Return the port of the diagnostic web server. If the server is not running this call will start
    * the server. If unable to start the diagnostic web server, this call will return an error of
-   * DEBUG_PORT_COULD_NOT_BE_OPENED.
+   * <code>DEBUG_PORT_COULD_NOT_BE_OPENED</code>.
    */
   public void diagnostic_getServerPort(GetServerPortConsumer consumer);
 
@@ -509,19 +486,20 @@ public interface AnalysisServer {
    *
    * @param included A list of the files and directories for which edits should be suggested. If a
    *        request is made with a path that is invalid, e.g. is not absolute and normalized, an
-   *        error of type INVALID_FILE_PATH_FORMAT will be generated. If a request is made for a file
-   *        which does not exist, or which is not currently subject to analysis (e.g. because it is
-   *        not associated with any analysis root specified to analysis.setAnalysisRoots), an error
-   *        of type FILE_NOT_ANALYZED will be generated.
+   *        error of type <code>INVALID_FILE_PATH_FORMAT</code> will be generated. If a request is
+   *        made for a file which does not exist, or which is not currently subject to analysis (e.g.
+   *        because it is not associated with any analysis root specified to
+   *        analysis.setAnalysisRoots), an error of type <code>FILE_NOT_ANALYZED</code> will be
+   *        generated.
    * @param inTestMode A flag indicating whether the bulk fixes are being run in test mode. The only
    *        difference is that in test mode the fix processor will look for a configuration file that
    *        can modify the content of the data file used to compute the fixes when data-driven fixes
-   *        are being considered. If this field is omitted the flag defaults to false.
+   *        are being considered. If this field is omitted the flag defaults to <code>false</code>.
    * @param updatePubspec A flag indicating whether to validate that the dependencies used by the
    *        included files are listed in the pubspec file. If specified, the fix processor will
    *        compute the set of packages imported in the source and check to see if they are listed in
    *        the corresponding pubspec file, and compute the fixes, if any. If this field is omitted
-   *        the flag defaults to false.
+   *        the flag defaults to <code>false</code>.
    * @param codes A list of diagnostic codes to be fixed.
    */
   public void edit_bulkFixes(List<String> included, boolean inTestMode, boolean updatePubspec, List<String> codes, BulkFixesConsumer consumer);
@@ -537,13 +515,16 @@ public interface AnalysisServer {
    *
    * If a request is made for a file which does not exist, or which is not currently subject to
    * analysis (e.g. because it is not associated with any analysis root specified to
-   * analysis.setAnalysisRoots), an error of type FORMAT_INVALID_FILE will be generated. If the
-   * source contains syntax errors, an error of type FORMAT_WITH_ERRORS will be generated.
+   * analysis.setAnalysisRoots), an error of type <code>FORMAT_INVALID_FILE</code> will be generated.
+   * If the source contains syntax errors, an error of type <code>FORMAT_WITH_ERRORS</code> will be
+   * generated.
    *
    * @param file The file containing the code to be formatted.
    * @param selectionOffset The offset of the current selection in the file.
    * @param selectionLength The length of the current selection in the file.
-   * @param lineLength The line length to be used by the formatter.
+   * @param lineLength The line length to be used by the formatter. This value is ignored if a
+   *        <code>formatter.page_width</code> has been configured in the relevant
+   *        <code>analysis_options.yaml</code> file.
    */
   public void edit_format(String file, int selectionOffset, int selectionLength, int lineLength, FormatConsumer consumer);
 
@@ -559,7 +540,7 @@ public interface AnalysisServer {
    *
    * @param directories The paths of the directories containing the code to be formatted.
    */
-  public void edit_formatIfEnabled(List<String> directories, FormatConsumer consumer);
+  public void edit_formatIfEnabled(List<String> directories, FormatIfEnabledConsumer consumer);
 
   /**
    * {@code edit.getAssists}
@@ -593,7 +574,8 @@ public interface AnalysisServer {
    *
    * If a request is made for a file which does not exist, or which is not currently subject to
    * analysis (e.g. because it is not associated with any analysis root specified to
-   * analysis.setAnalysisRoots), an error of type GET_FIXES_INVALID_FILE will be generated.
+   * analysis.setAnalysisRoots), an error of type <code>GET_FIXES_INVALID_FILE</code> will be
+   * generated.
    *
    * @param file The file containing the errors for which fixes are being requested.
    * @param offset The offset used to select the errors for which fixes will be returned.
@@ -618,7 +600,7 @@ public interface AnalysisServer {
    * Get the changes required to perform a refactoring.
    *
    * If another refactoring request is received during the processing of this one, an error of type
-   * REFACTORING_REQUEST_CANCELLED will be generated.
+   * <code>REFACTORING_REQUEST_CANCELLED</code> will be generated.
    *
    * @param kind The kind of refactoring to be performed.
    * @param file The file containing the code involved in the refactoring.
@@ -656,7 +638,8 @@ public interface AnalysisServer {
    *
    * If a request is made for a file that does not exist, or that is not currently subject to
    * analysis (e.g. because it is not associated with any analysis root specified via
-   * analysis.setAnalysisRoots), an error of type IMPORT_ELEMENTS_INVALID_FILE will be generated.
+   * analysis.setAnalysisRoots), an error of type <code>IMPORT_ELEMENTS_INVALID_FILE</code> will be
+   * generated.
    *
    * @param file The file in which the specified elements are to be made accessible.
    * @param elements The elements to be made accessible in the specified file.
@@ -693,11 +676,11 @@ public interface AnalysisServer {
    * file according to the Dart Style Guide.
    *
    * If a request is made for a file that does not exist, does not belong to an analysis root or is
-   * not a Dart file, FILE_NOT_ANALYZED will be generated.
+   * not a Dart file, <code>FILE_NOT_ANALYZED</code> will be generated.
    *
    * If directives of the Dart file cannot be organized, for example because it has scan or parse
-   * errors, or by other reasons, ORGANIZE_DIRECTIVES_ERROR will be generated. The message will
-   * provide details about the reason.
+   * errors, or by other reasons, <code>ORGANIZE_DIRECTIVES_ERROR</code> will be generated. The
+   * message will provide details about the reason.
    *
    * @param file The Dart file to organize directives in.
    */
@@ -709,9 +692,10 @@ public interface AnalysisServer {
    * Sort all of the directives, unit and class members of the given Dart file.
    *
    * If a request is made for a file that does not exist, does not belong to an analysis root or is
-   * not a Dart file, SORT_MEMBERS_INVALID_FILE will be generated.
+   * not a Dart file, <code>SORT_MEMBERS_INVALID_FILE</code> will be generated.
    *
-   * If the Dart file has scan or parse errors, SORT_MEMBERS_PARSE_ERRORS will be generated.
+   * If the Dart file has scan or parse errors, <code>SORT_MEMBERS_PARSE_ERRORS</code> will be
+   * generated.
    *
    * @param file The Dart file to sort.
    */
@@ -769,7 +753,7 @@ public interface AnalysisServer {
    *        sub-expressions in the given code. The client may provide an empty list, in this case the
    *        server will return completion suggestions.
    */
-  public void execution_getSuggestions(String code, int offset, String contextFile, int contextOffset, List<RuntimeCompletionVariable> variables, List<RuntimeCompletionExpression> expressions, GetRuntimeCompletionConsumer consumer);
+  public void execution_getSuggestions(String code, int offset, String contextFile, int contextOffset, List<RuntimeCompletionVariable> variables, List<RuntimeCompletionExpression> expressions, GetSuggestionsConsumer consumer);
 
   /**
    * {@code execution.mapUri}
@@ -778,19 +762,19 @@ public interface AnalysisServer {
    * URI that it corresponds to in the execution context.
    *
    * Exactly one of the file and uri fields must be provided. If both fields are provided, then an
-   * error of type INVALID_PARAMETER will be generated. Similarly, if neither field is provided, then
-   * an error of type INVALID_PARAMETER will be generated.
+   * error of type <code>INVALID_PARAMETER</code> will be generated. Similarly, if neither field is
+   * provided, then an error of type <code>INVALID_PARAMETER</code> will be generated.
    *
    * If the file field is provided and the value is not the path of a file (either the file does not
    * exist or the path references something other than a file), then an error of type
-   * INVALID_PARAMETER will be generated.
+   * <code>INVALID_PARAMETER</code> will be generated.
    *
    * If the uri field is provided and the value is not a valid URI or if the URI references something
    * that is not a file (either a file that does not exist or something other than a file), then an
-   * error of type INVALID_PARAMETER will be generated.
+   * error of type <code>INVALID_PARAMETER</code> will be generated.
    *
    * If the contextRoot used to create the execution context does not exist, then an error of type
-   * INVALID_EXECUTION_CONTEXT will be generated.
+   * <code>INVALID_EXECUTION_CONTEXT</code> will be generated.
    *
    * @param id The identifier of the execution context in which the URI is to be mapped.
    * @param file The path of the file to be mapped into a URI.
@@ -801,7 +785,7 @@ public interface AnalysisServer {
   /**
    * {@code execution.setSubscriptions}
    *
-   * Deprecated: the analysis server no longer fires LAUNCH_DATA events.
+   * Deprecated: the analysis server no longer fires <code>LAUNCH_DATA</code> events.
    *
    * Subscribe for services. All previous subscriptions are replaced by the given set of services.
    *
@@ -820,10 +804,10 @@ public interface AnalysisServer {
    * Return the description of the widget instance at the given location.
    *
    * If the location does not have a support widget, an error of type
-   * FLUTTER_GET_WIDGET_DESCRIPTION_NO_WIDGET will be generated.
+   * <code>FLUTTER_GET_WIDGET_DESCRIPTION_NO_WIDGET</code> will be generated.
    *
    * If a change to a file happens while widget descriptions are computed, an error of type
-   * FLUTTER_GET_WIDGET_DESCRIPTION_CONTENT_MODIFIED will be generated.
+   * <code>FLUTTER_GET_WIDGET_DESCRIPTION_CONTENT_MODIFIED</code> will be generated.
    *
    * @param file The file where the widget instance is created.
    * @param offset The offset in the file where the widget instance is created.
@@ -870,14 +854,15 @@ public interface AnalysisServer {
    * intermediate widgets instantiated.
    *
    * @param id The identifier of the property, previously returned as a part of a
-   *        FlutterWidgetProperty. An error of type FLUTTER_SET_WIDGET_PROPERTY_VALUE_INVALID_ID is
-   *        generated if the identifier is not valid.
+   *        <code>FlutterWidgetProperty</code>. An error of type
+   *        <code>FLUTTER_SET_WIDGET_PROPERTY_VALUE_INVALID_ID</code> is generated if the identifier
+   *        is not valid.
    * @param value The new value to set for the property. If absent, indicates that the property
    *        should be removed. If the property corresponds to an optional parameter, the
-   *        corresponding named argument is removed. If the property isRequired is true,
-   *        FLUTTER_SET_WIDGET_PROPERTY_VALUE_IS_REQUIRED error is generated. If the expression is
-   *        not a syntactically valid Dart code, then
-   *        FLUTTER_SET_WIDGET_PROPERTY_VALUE_INVALID_EXPRESSION is reported.
+   *        corresponding named argument is removed. If the property <code>isRequired</code> is true,
+   *        <code>FLUTTER_SET_WIDGET_PROPERTY_VALUE_IS_REQUIRED</code> error is generated. If the
+   *        <code>expression</code> is not a syntactically valid Dart code, then
+   *        <code>FLUTTER_SET_WIDGET_PROPERTY_VALUE_INVALID_EXPRESSION</code> is reported.
    */
   public void flutter_setWidgetPropertyValue(int id, FlutterWidgetPropertyValue value, SetWidgetPropertyValueConsumer consumer);
 
@@ -887,8 +872,22 @@ public interface AnalysisServer {
   public boolean isSocketOpen();
 
   /**
+   * {@code lsp.handle}
+   *
+   * Call an LSP handler. Message can be requests or notifications.
+   *
+   * This request can be called in either direction, either by the client to the server, or by the
+   * server to the client. The server will only call the client if the client has indicated it
+   * supports the associated LSP request via <code>lspCapabilities</code> in the
+   * <code>setClientCapabilities</code> request.
+   *
+   * @param lspMessage The LSP RequestMessage.
+   */
+  public void lsp_handle(Object lspMessage, HandleConsumer consumer);
+
+  /**
    * Remove the given listener from the list of listeners that will receive notification when new
-   * analysis results become available.
+     * analysis results become available.
    *
    * @param listener the listener to be removed
    */
@@ -896,7 +895,7 @@ public interface AnalysisServer {
 
   /**
    * Remove the given listener from the list of listeners that will receive notification when
-   * requests are made by an analysis server client.
+     * requests are made by an analysis server client.
    *
    * @param listener the listener to be removed
    */
@@ -904,11 +903,19 @@ public interface AnalysisServer {
 
   /**
    * Remove the given listener from the list of listeners that will receive notification when
-   * responses are received by an analysis server client.
+     * responses are received by an analysis server client.
    *
    * @param listener the listener to be removed
    */
   public void removeResponseListener(ResponseListener listener);
+
+  /**
+   * Remove the given listener from the list of listeners that will receive notification when the server
+   * is not active
+   *
+   * @param listener the listener to be removed
+   */
+  public void removeStatusListener(AnalysisServerStatusListener listener);
 
   /**
    * {@code search.findElementReferences}
@@ -1022,7 +1029,7 @@ public interface AnalysisServer {
    * The client is expected to open the URL, either within the client's UI or in the default browser.
    *
    * The request will only be sent from the server to the client if the client has indicated that it
-   * supports this request by using the setClientCapabilities request.
+   * supports this request by using the <code>setClientCapabilities</code> request.
    *
    * @param url The URL to be opened.
    */
@@ -1039,16 +1046,21 @@ public interface AnalysisServer {
    *        list if the client will unconditionally honor the request. The default, used before this
    *        request is received, is an empty list. The following is a list of the names of the
    *        requests that can be specified:
-   *        - openUrlRequest
-   *        - showMessageRequest
+   *        - <code>openUrlRequest</code>
+   *        - <code>showMessageRequest</code>
    * @param supportsUris True if the client supports the server sending URIs in place of file paths.
-   *        In this mode, the server will use URIs in all protocol fields with the type FilePath.
-   *        Returned URIs may be `file://` URIs or custom schemes. The client can fetch the file
-   *        contents for URIs with custom schemes (and receive modification events) through the LSP
-   *        protocol (see the "lsp" domain). LSP notifications are automatically enabled when the
-   *        client sets this capability.
+   *        In this mode, the server will use URIs in all protocol fields with the type
+   *        <code>FilePath</code>. Returned URIs may be `file://` URIs or custom schemes. The client
+   *        can fetch the file contents for URIs with custom schemes (and receive modification
+   *        events) through the LSP protocol (see the "lsp" domain). LSP notifications are
+   *        automatically enabled when the client sets this capability.
+   * @param lspCapabilities LSP capabilities of the client as defined by the Language Server Protocol
+   *        specification. If custom LSP capabilities are to be used, the setClientCapabilities
+   *        request should be called before any LSP requests are made to the server. If LSP
+   *        capabilities are not provided or no setClientCapabilities request is made, a very basic
+   *        set of capabilities will be assumed.
    */
-  public void server_setClientCapabilities(List<String> requests, boolean supportsUris, boolean supportsWorkspaceApplyEdits);
+  public void server_setClientCapabilities(List<String> requests, boolean supportsUris, Object lspCapabilities);
 
   /**
    * {@code server.setSubscriptions}
@@ -1074,7 +1086,7 @@ public interface AnalysisServer {
    * clicked.
    *
    * The request will only be sent from the server to the client if the client has indicated that it
-   * supports this request by using the setClientCapabilities request.
+   * supports this request by using the <code>setClientCapabilities</code> request.
    *
    * This request is modeled after the same request from the LSP specification.
    *
@@ -1083,10 +1095,6 @@ public interface AnalysisServer {
    * @param actions The labels of the buttons by which the user can dismiss the message.
    */
   public void server_showMessageRequest(String type, String message, List<MessageAction> actions, ShowMessageRequestConsumer consumer);
-
-  public void lsp_workspaceApplyEdit(DartLspApplyWorkspaceEditParams params, DartLspWorkspaceApplyEditRequestConsumer consumer);
-
-  public void lsp_connectToDtd(String uri);
 
   /**
    * {@code server.shutdown}

@@ -13,7 +13,7 @@
  */
 package com.google.dart.server.internal.remote.processor;
 
-import com.google.dart.server.GetRuntimeCompletionConsumer;
+import com.google.dart.server.GetSuggestionsConsumer;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
@@ -23,14 +23,14 @@ import java.util.List;
 
 /**
  * Instances of {@code GetRuntimeSuggesionsConsumer} translate JSON result objects for a given
- * {@link GetRuntimeCompletionConsumer}.
+ * {@link GetSuggestionsConsumer}.
  * 
  * @coverage dart.server.remote
  */
 public class GetRuntimeCompletionProcessor extends ResultProcessor {
-  private final GetRuntimeCompletionConsumer consumer;
+  private final GetSuggestionsConsumer consumer;
 
-  public GetRuntimeCompletionProcessor(GetRuntimeCompletionConsumer consumer) {
+  public GetRuntimeCompletionProcessor(GetSuggestionsConsumer consumer) {
     this.consumer = consumer;
   }
 

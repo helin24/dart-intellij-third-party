@@ -13,8 +13,7 @@
  */
 package com.google.dart.server.internal.remote.processor;
 
-import com.google.dart.server.GetSuggestionsConsumer;
-import com.google.dart.server.GetSuggestionsConsumer2;
+import com.google.dart.server.GetSuggestions2Consumer;
 import com.google.dart.server.utilities.general.JsonUtilities;
 import com.google.gson.JsonObject;
 
@@ -25,15 +24,15 @@ import java.util.List;
 
 /**
  * Instances of {@code CompletionIdProcessor2} translate JSON result objects for a given
- * {@link GetSuggestionsConsumer2}.
+ * {@link GetSuggestions2Consumer}.
  *
  * @coverage dart.server.remote
  */
 public class CompletionIdProcessor2 extends ResultProcessor {
 
-  private final GetSuggestionsConsumer2 consumer;
+  private final GetSuggestions2Consumer consumer;
 
-  public CompletionIdProcessor2(GetSuggestionsConsumer2 consumer) {
+  public CompletionIdProcessor2(GetSuggestions2Consumer consumer) {
     this.consumer = consumer;
   }
 

@@ -13,8 +13,7 @@
  */
 package com.google.dart.server.internal.remote.processor;
 
-import com.google.dart.server.GetSuggestionDetailsConsumer2;
-import com.google.dart.server.GetSuggestionsConsumer2;
+import com.google.dart.server.GetSuggestionDetails2Consumer;
 import com.google.gson.JsonObject;
 
 import org.dartlang.analysis.server.protocol.RequestError;
@@ -22,15 +21,15 @@ import org.dartlang.analysis.server.protocol.SourceChange;
 
 /**
  * Instances of {@code GetSuggestionDetailsProcessor2} translate JSON result objects for a given
- * {@link GetSuggestionDetailsConsumer2}.
+ * {@link GetSuggestionDetails2Consumer}.
  *
  * @coverage dart.server.remote
  */
 public class GetSuggestionDetailsProcessor2 extends ResultProcessor {
 
-  private final GetSuggestionDetailsConsumer2 consumer;
+  private final GetSuggestionDetails2Consumer consumer;
 
-  public GetSuggestionDetailsProcessor2(GetSuggestionDetailsConsumer2 consumer) {
+  public GetSuggestionDetailsProcessor2(GetSuggestionDetails2Consumer consumer) {
     this.consumer = consumer;
   }
 

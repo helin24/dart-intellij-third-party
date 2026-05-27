@@ -193,6 +193,7 @@ public final class DartAnalysisServerService implements Disposable {
   private final @NotNull List<AnalysisServerListener> myAdditionalServerListeners = new SmartList<>();
   private final @NotNull List<RequestListener> myRequestListeners = new SmartList<>();
   private final @NotNull List<ResponseListener> myResponseListeners = new SmartList<>();
+  private final @NotNull List<AnalysisServerStatusListener> myStatusListeners = new SmartList<>();
   private final @NotNull List<DartQuickAssistIntentionListener> myQuickAssistIntentionListeners = new SmartList<>();
   private final @NotNull List<DartQuickFixListener> myQuickFixListeners = new SmartList<>();
 
@@ -333,11 +334,6 @@ public final class DartAnalysisServerService implements Disposable {
     @Override
     public void serverConnected(@Nullable String version) {
       myServerVersion = version != null ? version : "";
-      // completion_setSubscriptions() are handled here instead of in startServer() as the server version isn't known until this
-      // serverConnected() call.
-      if (myServer != null && !shouldUseCompletion2()) {
-        myServer.completion_setSubscriptions(List.of(CompletionService.AVAILABLE_SUGGESTION_SETS));
-      }
     }
 
     @Override
@@ -634,6 +630,22 @@ public final class DartAnalysisServerService implements Disposable {
     myResponseListeners.remove(responseListener);
     if (myServer != null) {
       myServer.removeResponseListener(responseListener);
+    }
+  }
+
+  public void addStatusListener(final @NotNull AnalysisServerStatusListener statusListener) {
+    if (!myStatusListeners.contains(statusListener)) {
+      myStatusListeners.add(statusListener);
+      if (myServer != null && isServerProcessActive()) {
+        myServer.addStatusListener(statusListener);
+      }
+    }
+  }
+
+  public void removeStatusListener(final @NotNull AnalysisServerStatusListener statusListener) {
+    myStatusListeners.remove(statusListener);
+    if (myServer != null) {
+      myServer.removeStatusListener(statusListener);
     }
   }
 
@@ -1475,36 +1487,7 @@ public final class DartAnalysisServerService implements Disposable {
                                                                               int id,
                                                                               String label,
                                                                               int _offset) {
-    if (!file.isInLocalFileSystem()) return null;
-
-    final AnalysisServer server = myServer;
-    if (server == null) {
-      return null;
-    }
-
-    final String fileUri = getLocalFileUri(file.getPath());
-    final Ref<Pair<String, SourceChange>> resultRef = new Ref<>();
-    final CountDownLatch latch = new CountDownLatch(1);
-    final int offset = getOriginalOffset(file, _offset);
-    server.completion_getSuggestionDetails(fileUri, id, label, offset, new GetSuggestionDetailsConsumer() {
-      @Override
-      public void computedDetails(String completion, SourceChange change) {
-        resultRef.set(new Pair<>(completion, change));
-        latch.countDown();
-      }
-
-      @Override
-      public void onError(RequestError requestError) {
-        latch.countDown();
-      }
-    });
-
-    awaitForLatchCheckingCanceled(server, latch, GET_SUGGESTION_DETAILS_TIMEOUT);
-
-    if (latch.getCount() > 0) {
-      logTookTooLongMessage("completion_getSuggestionDetails", GET_SUGGESTION_DETAILS_TIMEOUT, fileUri);
-    }
-    return resultRef.get();
+    return null;
   }
 
   public @Nullable Pair<String, SourceChange> completion_getSuggestionDetails2(@NotNull VirtualFile file,
@@ -1522,7 +1505,7 @@ public final class DartAnalysisServerService implements Disposable {
     final Ref<Pair<String, SourceChange>> resultRef = new Ref<>();
     final CountDownLatch latch = new CountDownLatch(1);
     final int offset = getOriginalOffset(file, _offset);
-    server.completion_getSuggestionDetails2(fileUri, offset, completion, libraryUri, new GetSuggestionDetailsConsumer2() {
+    server.completion_getSuggestionDetails2(fileUri, offset, completion, libraryUri, new GetSuggestionDetails2Consumer() {
       @Override
       public void computedDetails(String completion, SourceChange change) {
         resultRef.set(new Pair<>(completion, change));
@@ -1545,46 +1528,7 @@ public final class DartAnalysisServerService implements Disposable {
 
 
   public @Nullable String completion_getSuggestions(final @NotNull VirtualFile file, final int _offset) {
-    if (!file.isInLocalFileSystem()) return null;
-
-    final AnalysisServer server = myServer;
-    if (server == null) {
-      return null;
-    }
-
-    for (DartCompletionTimerExtension extension : DartCompletionTimerExtension.getExtensions()) {
-      extension.dartCompletionStart();
-    }
-
-    final String fileUri = getLocalFileUri(file.getPath());
-    final Ref<String> resultRef = new Ref<>();
-    final CountDownLatch latch = new CountDownLatch(1);
-    final int offset = getOriginalOffset(file, _offset);
-    server.completion_getSuggestions(fileUri, offset, new GetSuggestionsConsumer() {
-      @Override
-      public void computedCompletionId(final @NotNull String completionId) {
-        resultRef.set(completionId);
-        latch.countDown();
-      }
-
-      @Override
-      public void onError(final @NotNull RequestError error) {
-        for (DartCompletionTimerExtension extension : DartCompletionTimerExtension.getExtensions()) {
-          extension.dartCompletionError(StringUtil.notNullize(error.getCode()), StringUtil.notNullize(error.getMessage()),
-                                        StringUtil.notNullize(error.getStackTrace()));
-        }
-        // Not a problem. Happens if a file is outside the project, or server is just not ready yet.
-        latch.countDown();
-      }
-    });
-
-    awaitForLatchCheckingCanceled(server, latch, GET_SUGGESTIONS_TIMEOUT);
-
-    if (latch.getCount() > 0) {
-      logTookTooLongMessage("completion_getSuggestions", GET_SUGGESTIONS_TIMEOUT, fileUri);
-    }
-
-    return resultRef.get();
+    return null;
   }
 
   public @Nullable CompletionInfo2 completion_getSuggestions2(final @NotNull VirtualFile file,
@@ -1621,7 +1565,7 @@ public final class DartAnalysisServerService implements Disposable {
     }
 
     server.completion_getSuggestions2(fileUri, offset, maxResults, completionCaseMatchingMode, completionMode, invocationCount, -1,
-                                      new GetSuggestionsConsumer2() {
+                                      new GetSuggestions2Consumer() {
                                         @Override
                                         public void computedSuggestions(int replacementOffset,
                                                                         int replacementLength,
@@ -1986,7 +1930,7 @@ public final class DartAnalysisServerService implements Disposable {
       code, offset,
       contextFileUri, contextOffset,
       variables, expressions,
-      new GetRuntimeCompletionConsumer() {
+      new GetSuggestionsConsumer() {
         @Override
         public void computedResult(List<CompletionSuggestion> suggestions, List<RuntimeCompletionExpression> expressions) {
           refResult.set(new Pair<>(suggestions, expressions));
@@ -2208,6 +2152,9 @@ public final class DartAnalysisServerService implements Disposable {
         for (ResponseListener listener : myResponseListeners) {
           startedServer.addResponseListener(listener);
         }
+        for (AnalysisServerStatusListener listener : myStatusListeners) {
+          startedServer.addStatusListener(listener);
+        }
 
         myHaveShownInitialProgress = false;
         startedServer.addStatusListener(isAlive -> {
@@ -2358,8 +2305,7 @@ public final class DartAnalysisServerService implements Disposable {
   }
 
   public void connectToDtd(@NotNull String uri) {
-    AnalysisServer server = myServer;
-    if (server == null) {
+    if (myServer == null) {
       return;
     }
 
@@ -2367,7 +2313,7 @@ public final class DartAnalysisServerService implements Disposable {
     // Connection to DTD is used for server-initiated edits (workspace.applyEdits)
     if (supportsWorkspaceApplyEdits && !uri.equals(myDtdUri)) {
       myDtdUri = uri;
-      server.lsp_connectToDtd(uri);
+      myServer.lsp_connectToDtd(uri);
     }
   }
 

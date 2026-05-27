@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, the Dart project authors.
+ * Copyright (c) 2021, the Dart project authors.
  *
  * Licensed under the Eclipse Public License v1.0 (the "License"); you may not use this file except
  * in compliance with the License. You may obtain a copy of the License at
@@ -13,14 +13,11 @@
  */
 package com.google.dart.server;
 
-import org.dartlang.analysis.server.protocol.CompletionSuggestion;
 import org.dartlang.analysis.server.protocol.RequestError;
-import org.dartlang.analysis.server.protocol.RuntimeCompletionExpression;
+import org.dartlang.analysis.server.protocol.SourceChange;
 
-import java.util.List;
-
-public interface GetSuggestionsConsumer extends Consumer {
-  public void computedResult(List<CompletionSuggestion> suggestions, List<RuntimeCompletionExpression> expressions);
+public interface GetSuggestionDetails2Consumer extends Consumer {
+  public void computedDetails(String completion, SourceChange change);
 
   public void onError(RequestError requestError);
 }

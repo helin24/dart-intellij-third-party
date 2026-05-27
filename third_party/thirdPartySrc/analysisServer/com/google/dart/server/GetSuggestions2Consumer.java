@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, the Dart project authors.
+ * Copyright (c) 2021, the Dart project authors.
  *
  * Licensed under the Eclipse Public License v1.0 (the "License"); you may not use this file except
  * in compliance with the License. You may obtain a copy of the License at
@@ -15,12 +15,26 @@ package com.google.dart.server;
 
 import org.dartlang.analysis.server.protocol.CompletionSuggestion;
 import org.dartlang.analysis.server.protocol.RequestError;
-import org.dartlang.analysis.server.protocol.RuntimeCompletionExpression;
 
 import java.util.List;
 
-public interface GetRuntimeCompletionConsumer extends Consumer {
-  public void computedResult(List<CompletionSuggestion> suggestions, List<RuntimeCompletionExpression> expressions);
+/**
+ * The interface {@code GetSuggestions2Consumer} defines the behavior of objects that consume
+ * completion suggestions.
+ *
+ * @coverage dart.server
+ */
+public interface GetSuggestions2Consumer extends Consumer {
 
+  public void computedSuggestions(int replacementOffset,
+                                  int replacementLength,
+                                  List<CompletionSuggestion> suggestions,
+                                  boolean isIncomplete);
+
+  /**
+   * If a completion id cannot be passed back, some {@link RequestError} is passed back instead.
+   *
+   * @param requestError the reason why a result was not passed back
+   */
   public void onError(RequestError requestError);
 }
